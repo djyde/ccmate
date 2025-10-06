@@ -107,18 +107,19 @@ export const useCurrentStore = () => {
   });
 };
 
-export const useCreateStore = () => {
+export const useCreateConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ title, settings }: { title: string; settings: unknown }) => {
       const id = nanoid(6);
-      return invoke<ConfigStore>("create_store", { id, title, settings });
+      return invoke<ConfigStore>("create_config", { id, title, settings });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(i18n.t("toast.storeCreated"));
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
+      await rebuildTrayMenu();
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -127,19 +128,20 @@ export const useCreateStore = () => {
   });
 };
 
-export const useDeleteStore = () => {
+export const useDeleteConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (body: {
       storeId: string;
-    }) => invoke<void>("delete_store", {
+    }) => invoke<void>("delete_config", {
       storeId: body.storeId,
     }),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(i18n.t("toast.storeDeleted"));
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
+      await rebuildTrayMenu();
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -148,11 +150,11 @@ export const useDeleteStore = () => {
   });
 };
 
-export const useSetUsingStore = () => {
+export const useSetUsingConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (storeId: string) => invoke<void>("set_using_store", { storeId }),
+    mutationFn: (storeId: string) => invoke<void>("set_using_config", { storeId }),
     onSuccess: () => {
       toast.success(i18n.t("toast.storeActivated"));
       queryClient.invalidateQueries({ queryKey: ["stores"] });
@@ -166,11 +168,11 @@ export const useSetUsingStore = () => {
   });
 };
 
-export const useSetCurrentStore = () => {
+export const useSetCurrentConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (storeId: string) => invoke<void>("set_using_store", { storeId }),
+    mutationFn: (storeId: string) => invoke<void>("set_using_config", { storeId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
@@ -179,13 +181,13 @@ export const useSetCurrentStore = () => {
   });
 };
 
-export const useUpdateStore = () => {
+export const useUpdateConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ storeId, title, settings }: { storeId: string; title: string; settings: unknown }) =>
-      invoke<ConfigStore>("update_store", { storeId, title, settings }),
-    onSuccess: (data) => {
+      invoke<ConfigStore>("update_config", { storeId, title, settings }),
+    onSuccess: async (data) => {
       if (data.using) {
         toast.success(i18n.t("toast.storeSavedAndActive", { title: data.title }));
       } else {
@@ -197,6 +199,7 @@ export const useUpdateStore = () => {
       if (data.using) {
         queryClient.invalidateQueries({ queryKey: ["config-file", "user"] });
       }
+      await rebuildTrayMenu();
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -238,4 +241,13 @@ export const useInstallAndRestart = () => {
       toast.error(i18n.t("toast.updateInstallFailed", { error: errorMessage }));
     },
   });
+};
+
+// Helper function to rebuild tray menu
+const rebuildTrayMenu = async () => {
+  try {
+    await invoke<void>("rebuild_tray_menu_command");
+  } catch (error) {
+    console.error("Failed to rebuild tray menu:", error);
+  }
 };

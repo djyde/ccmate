@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { useStores, useSetCurrentStore, useCreateStore } from "../lib/query";
+import { useStores, useSetCurrentConfig, useCreateConfig } from "../lib/query";
 import { cn } from "@/lib/utils";
 import { PencilLineIcon, PlusIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +18,7 @@ export function ConfigSwitcherPage() {
 function ConfigStores() {
   const { t } = useTranslation();
   const { data: stores } = useStores();
-  const setCurrentStoreMutation = useSetCurrentStore();
+  const setCurrentStoreMutation = useSetCurrentConfig();
   const navigate = useNavigate();
   const handleStoreClick = (storeId: string, isCurrentStore: boolean) => {
     if (!isCurrentStore) {
@@ -26,7 +26,7 @@ function ConfigStores() {
     }
   };
 
-  const createStoreMutation = useCreateStore();
+  const createStoreMutation = useCreateConfig();
 
   const onCreateStore = async () => {
     const store = await createStoreMutation.mutateAsync({

@@ -1,4 +1,5 @@
 mod commands;
+mod tray;
 
 use commands::*;
 
@@ -10,6 +11,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Configure window for macOS
             #[cfg(target_os = "macos")]
@@ -93,10 +95,23 @@ pub fn run() {
 
             app.set_menu(menu)?;
 
-            // Handle menu events
+            // Initialize system tray
+            if let Err(e) = tray::create_tray(&app.handle()) {
+                eprintln!("Failed to create system tray: {}", e);
+            }
+
+            // Handle menu events (both app menu and tray menu)
             app.on_menu_event(|app_handle, event| {
                 use tauri::Manager;
-                match event.id().0.as_str() {
+                let event_id = event.id().0.as_str();
+                
+                // Try to handle as tray menu event first
+                if tray::handle_tray_menu_event(&app_handle, event_id) {
+                    return;
+                }
+                
+                // Handle app menu events
+                match event_id {
                     "open_config_path" => {
                         tauri::async_runtime::spawn(async move {
                             if let Err(e) = commands::open_config_path().await {
@@ -136,14 +151,15 @@ pub fn run() {
             backup_claude_configs,
             get_stores,
             get_store,
-            create_store,
-            update_store,
-            delete_store,
-            set_using_store,
+            create_config,
+            update_config,
+            delete_config,
+            set_using_config,
             get_current_store,
             open_config_path,
             check_for_updates,
-            install_and_restart
+            install_and_restart,
+            rebuild_tray_menu_command
         ])
         .on_window_event(|window, event| {
             #[cfg(target_os = "macos")]

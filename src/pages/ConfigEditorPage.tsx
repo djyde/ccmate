@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { set, get, transform, isEmpty, isPlainObject } from "lodash-es";
 import { match } from "ts-pattern";
-import { useDeleteStore, useStore, useUpdateStore } from "../lib/query";
+import { useDeleteConfig, useStore, useUpdateConfig } from "../lib/query";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -575,8 +575,8 @@ export function ConfigEditorPage() {
   const navigate = useNavigate();
 
   const storeQuery = useStore(storeId!);
-  const updateStore = useUpdateStore();
-  const deleteStore = useDeleteStore();
+  const updateStore = useUpdateConfig();
+  const deleteStore = useDeleteConfig();
 
   const storeData = storeQuery.data;
 

@@ -314,7 +314,7 @@ pub async fn get_stores() -> Result<Vec<ConfigStore>, String> {
 }
 
 #[tauri::command]
-pub async fn create_store(
+pub async fn create_config(
     id: String,
     title: String,
     settings: Value,
@@ -383,7 +383,7 @@ pub async fn create_store(
 }
 
 #[tauri::command]
-pub async fn delete_store(store_id: String) -> Result<(), String> {
+pub async fn delete_config(store_id: String) -> Result<(), String> {
     let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
     let app_config_path = home_dir.join(APP_CONFIG_DIR);
     let stores_file = app_config_path.join("stores.json");
@@ -418,7 +418,7 @@ pub async fn delete_store(store_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn set_using_store(store_id: String) -> Result<(), String> {
+pub async fn set_using_config(store_id: String) -> Result<(), String> {
     let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
     let app_config_path = home_dir.join(APP_CONFIG_DIR);
     let stores_file = app_config_path.join("stores.json");
@@ -493,7 +493,7 @@ pub async fn get_store(store_id: String) -> Result<ConfigStore, String> {
 }
 
 #[tauri::command]
-pub async fn update_store(
+pub async fn update_config(
     store_id: String,
     title: String,
     settings: Value,
@@ -647,6 +647,11 @@ pub async fn check_for_updates(app: tauri::AppHandle) -> Result<UpdateInfo, Stri
             Err(format!("Failed to get updater: {}", e))
         }
     }
+}
+
+#[tauri::command]
+pub async fn rebuild_tray_menu_command(app: tauri::AppHandle) -> Result<(), String> {
+    crate::tray::rebuild_tray_menu(app).await
 }
 
 #[tauri::command]
