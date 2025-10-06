@@ -7,8 +7,7 @@
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist",
-    "createUpdaterArtifacts": true
+    "frontendDist": "../dist"
   },
   "app": {
     "macOSPrivateApi": true,
@@ -30,6 +29,7 @@
     }
   },
   "bundle": {
+    "createUpdaterArtifacts": true,
     "active": true,
     "targets": "all",
     "icon": [
