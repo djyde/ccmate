@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useStores, useCreateStore } from "../lib/query";
+import { useStores, useCreateStore, useUpdateStore } from "../lib/query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,11 +46,13 @@ const claudeConfigSchema = z.object({
 type ClaudeConfigForm = z.infer<typeof claudeConfigSchema>;
 
 export function StoreEditPage() {
-  const { storeName } = useParams<{ storeName: string }>();
+  const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
   const { data: stores } = useStores();
   const createStoreMutation = useCreateStore();
+  const updateStoreMutation = useUpdateStore();
   const [isExistingStore, setIsExistingStore] = useState(false);
+  const [storeName, setStoreName] = useState("");
   const [envVars, setEnvVars] = useState([{ key: "", value: "" }]);
   const [allowPermissions, setAllowPermissions] = useState([""]);
   const [denyPermissions, setDenyPermissions] = useState([""]);
@@ -72,10 +74,11 @@ export function StoreEditPage() {
   });
 
   useEffect(() => {
-    if (stores && storeName) {
-      const existingStore = stores.find(s => s.name === storeName);
+    if (stores && storeId) {
+      const existingStore = stores.find(s => s.id === storeId);
       if (existingStore) {
         setIsExistingStore(true);
+        setStoreName(existingStore.name);
         const config = existingStore.settings as any;
 
         // Set form values from existing store
@@ -94,11 +97,19 @@ export function StoreEditPage() {
             setValue(key as any, config[key]);
           }
         });
+      } else {
+        // New store, set storeName from URL if provided as fallback
+        setStoreName("");
       }
     }
-  }, [stores, storeName, setValue]);
+  }, [stores, storeId, setValue]);
 
   const onSubmit = (data: ClaudeConfigForm) => {
+    if (!storeName.trim()) {
+      alert("Please enter a store name");
+      return;
+    }
+
     // Process environment variables
     const envObject: Record<string, string> = {};
     envVars.forEach(({ key, value }) => {
@@ -123,10 +134,20 @@ export function StoreEditPage() {
       permissions: Object.values(permissions).some(v => v !== undefined && (Array.isArray(v) ? v.length > 0 : v !== undefined)) ? permissions : undefined,
     };
 
-    createStoreMutation.mutate({
-      name: storeName!,
-      settings: finalConfig,
-    });
+    if (isExistingStore && storeId) {
+      // Update existing store
+      updateStoreMutation.mutate({
+        storeId,
+        name: storeName.trim(),
+        settings: finalConfig,
+      });
+    } else {
+      // Create new store
+      createStoreMutation.mutate({
+        name: storeName.trim(),
+        settings: finalConfig,
+      });
+    }
   };
 
   const addEnvVar = () => setEnvVars([...envVars, { key: "", value: "" }]);
@@ -176,12 +197,12 @@ export function StoreEditPage() {
   };
 
   useEffect(() => {
-    if (createStoreMutation.isSuccess) {
+    if (createStoreMutation.isSuccess || updateStoreMutation.isSuccess) {
       setTimeout(() => {
         navigate("/");
       }, 2000);
     }
-  }, [createStoreMutation.isSuccess, navigate]);
+  }, [createStoreMutation.isSuccess, updateStoreMutation.isSuccess, navigate]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -202,6 +223,15 @@ export function StoreEditPage() {
               <CardDescription>Core Claude Code configuration</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="storeName">Store Name</Label>
+                <Input
+                  id="storeName"
+                  value={storeName}
+                  onChange={(e) => setStoreName(e.target.value)}
+                  placeholder="Enter store name..."
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="model">Model</Label>
@@ -600,8 +630,8 @@ export function StoreEditPage() {
 
           {/* Form Actions */}
           <div className="flex gap-4">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : isExistingStore ? "Update Store" : "Create Store"}
+            <Button type="submit" disabled={isSubmitting || createStoreMutation.isPending || updateStoreMutation.isPending}>
+              {isSubmitting || createStoreMutation.isPending || updateStoreMutation.isPending ? "Saving..." : isExistingStore ? "Update Store" : "Create Store"}
             </Button>
             <Button type="button" variant="outline" onClick={() => navigate("/")}>
               Cancel
@@ -609,13 +639,15 @@ export function StoreEditPage() {
           </div>
 
           {/* Error and Success Messages */}
-          {createStoreMutation.error && (
+          {(createStoreMutation.error || updateStoreMutation.error) && (
             <Alert variant="destructive">
-              <AlertDescription>{createStoreMutation.error.message}</AlertDescription>
+              <AlertDescription>
+                {createStoreMutation.error?.message || updateStoreMutation.error?.message}
+              </AlertDescription>
             </Alert>
           )}
 
-          {createStoreMutation.isSuccess && (
+          {(createStoreMutation.isSuccess || updateStoreMutation.isSuccess) && (
             <Alert>
               <AlertDescription>
                 Store {isExistingStore ? "updated" : "created"} successfully! Redirecting...

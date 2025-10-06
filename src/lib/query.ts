@@ -127,9 +127,9 @@ export const useDeleteStore = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (name: string) => invoke<void>("delete_store", { name }),
-    onSuccess: (_, name) => {
-      toast.success(`Store "${name}" deleted successfully`);
+    mutationFn: (storeId: string) => invoke<void>("delete_store", { storeId }),
+    onSuccess: (_, storeId) => {
+      toast.success(`Store deleted successfully`);
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
     },
@@ -143,9 +143,9 @@ export const useSetUsingStore = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (name: string) => invoke<void>("set_using_store", { name }),
-    onSuccess: (_, name) => {
-      toast.success(`Switched to store "${name}"`);
+    mutationFn: (storeId: string) => invoke<void>("set_using_store", { storeId }),
+    onSuccess: (_, storeId) => {
+      toast.success(`Store activated successfully`);
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
       queryClient.invalidateQueries({ queryKey: ["config-file", "user"] });
@@ -160,7 +160,7 @@ export const useSetCurrentStore = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (name: string) => invoke<void>("set_using_store", { name }),
+    mutationFn: (storeId: string) => invoke<void>("set_using_store", { storeId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });

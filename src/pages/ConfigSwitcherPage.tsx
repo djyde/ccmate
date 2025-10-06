@@ -26,16 +26,18 @@ function ConfigStores() {
 
   const createStoreMutation = useCreateStore();
 
+  const onCreateStore = async () => {
+    const store = await createStoreMutation.mutateAsync({
+      name: "新配置",
+      settings: {},
+    });
+    navigate(`/edit/${store.id}`);
+  };
+
   if (stores.length === 0) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <button onClick={async _ => {
-          const store = await createStoreMutation.mutateAsync({
-            name: "新配置",
-            settings: {},
-          });
-          navigate(`/edit/${store.id}`);
-        }} className="flex items-center gap-2 rounded-lg border h-[32px] text-center px-3 text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/10 transition-colors duration-100">
+        <button onClick={onCreateStore} className="flex items-center gap-2 rounded-lg border h-[32px] text-center px-3 text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/10 transition-colors duration-100">
           <PlusIcon size={14} />
           新建配置
         </button>
@@ -44,9 +46,9 @@ function ConfigStores() {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex mb-4">
-        <button className="flex items-center gap-2 rounded-lg border h-[32px] text-center px-3 text-xs hover:bg-primary/10 hover:text-primary hover:border-primary/10 transition-colors duration-100">
+    <div className="px-4">
+      <div className="flex my-4 mt-3" data-tauri-drag-region>
+        <button onClick={onCreateStore} className="flex items-center gap-2 rounded-lg h-[32px] text-center px-3 text-sm hover:bg-primary/10 hover:text-primary transition-colors duration-100">
           <PlusIcon size={14} />
           新建配置
         </button>

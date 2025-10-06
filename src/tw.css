@@ -170,7 +170,7 @@
     user-select: none;
   }
 
-  * {
+  html, body {
     @apply overscroll-none;
   }
 

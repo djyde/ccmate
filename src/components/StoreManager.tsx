@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStores, useCreateStore, useDeleteStore, useSetUsingStore } from "../lib/query";
 import { Button } from "@/components/ui/button";
@@ -34,19 +34,26 @@ export function StoreManager() {
     }
   };
 
-  const handleDeleteStore = (storeName: string) => {
-    if (confirm(`Are you sure you want to delete the store "${storeName}"?`)) {
-      deleteStoreMutation.mutate(storeName);
+  const handleDeleteStore = (store: ConfigStore) => {
+    if (confirm(`Are you sure you want to delete the store "${store.name}"?`)) {
+      deleteStoreMutation.mutate(store.id);
     }
   };
 
-  const handleSetUsingStore = (storeName: string) => {
-    setUsingStoreMutation.mutate(storeName);
+  const handleSetUsingStore = (store: ConfigStore) => {
+    setUsingStoreMutation.mutate(store.id);
   };
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString();
   };
+
+  // Navigate to edit page after successful store creation
+  useEffect(() => {
+    if (createStoreMutation.isSuccess && createStoreMutation.data) {
+      navigate(`/store/${createStoreMutation.data.id}/edit`);
+    }
+  }, [createStoreMutation.isSuccess, createStoreMutation.data, navigate]);
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Loading stores...</div>;
   if (error) return <Alert variant="destructive"><AlertDescription>Error loading stores: {error.message}</AlertDescription></Alert>;
@@ -60,7 +67,11 @@ export function StoreManager() {
             onClick={() => {
               const storeName = prompt("Enter store name:");
               if (storeName && storeName.trim()) {
-                navigate(`/store/${encodeURIComponent(storeName.trim())}/edit`);
+                // Create store with empty settings first, then navigate to edit
+                createStoreMutation.mutate({
+                  name: storeName.trim(),
+                  settings: {},
+                });
               }
             }}
             size="sm"
@@ -132,7 +143,7 @@ export function StoreManager() {
         <div className="space-y-2">
           {stores.map((store: ConfigStore) => (
             <div
-              key={store.name}
+              key={store.id}
               className={`border rounded-lg p-3 ${
                 store.using ? 'border-primary bg-primary/5' : ''
               }`}
@@ -153,7 +164,7 @@ export function StoreManager() {
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => navigate(`/store/${store.name}/edit`)}
+                    onClick={() => navigate(`/store/${store.id}/edit`)}
                     variant="outline"
                     size="sm"
                   >
@@ -161,7 +172,7 @@ export function StoreManager() {
                   </Button>
                   {!store.using && (
                     <Button
-                      onClick={() => handleSetUsingStore(store.name)}
+                      onClick={() => handleSetUsingStore(store)}
                       disabled={setUsingStoreMutation.isPending}
                       variant="outline"
                       size="sm"
@@ -170,7 +181,7 @@ export function StoreManager() {
                     </Button>
                   )}
                   <Button
-                    onClick={() => handleDeleteStore(store.name)}
+                    onClick={() => handleDeleteStore(store)}
                     disabled={deleteStoreMutation.isPending || store.using}
                     variant="destructive"
                     size="sm"

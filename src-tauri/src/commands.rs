@@ -274,11 +274,6 @@ pub async fn create_store(id: String, name: String, settings: Value) -> Result<C
         HashMap::new()
     };
 
-    // Check if store with this name already exists
-    if stores.contains_key(&name) {
-        return Err("Store with this name already exists".to_string());
-    }
-
     // Create new store
     let new_store = ConfigStore {
         id: id.clone(),
@@ -291,8 +286,8 @@ pub async fn create_store(id: String, name: String, settings: Value) -> Result<C
         using: false,
     };
 
-    // Add store to collection
-    stores.insert(name.clone(), new_store.clone());
+    // Add store to collection using ID as key
+    stores.insert(id.clone(), new_store.clone());
 
     // Write back to file
     let json_content = serde_json::to_string_pretty(&stores)
@@ -305,7 +300,7 @@ pub async fn create_store(id: String, name: String, settings: Value) -> Result<C
 }
 
 #[tauri::command]
-pub async fn delete_store(name: String) -> Result<(), String> {
+pub async fn delete_store(store_id: String) -> Result<(), String> {
     let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
     let app_config_path = home_dir.join(APP_CONFIG_DIR);
     let stores_file = app_config_path.join("stores.json");
@@ -322,12 +317,12 @@ pub async fn delete_store(name: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to parse stores file: {}", e))?;
 
     // Check if store exists
-    if !stores.contains_key(&name) {
+    if !stores.contains_key(&store_id) {
         return Err("Store not found".to_string());
     }
 
     // Remove store
-    stores.remove(&name);
+    stores.remove(&store_id);
 
     // Write back to file
     let json_content = serde_json::to_string_pretty(&stores)
@@ -340,7 +335,7 @@ pub async fn delete_store(name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn set_using_store(name: String) -> Result<(), String> {
+pub async fn set_using_store(store_id: String) -> Result<(), String> {
     let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
     let app_config_path = home_dir.join(APP_CONFIG_DIR);
     let stores_file = app_config_path.join("stores.json");
@@ -357,7 +352,7 @@ pub async fn set_using_store(name: String) -> Result<(), String> {
         .map_err(|e| format!("Failed to parse stores file: {}", e))?;
 
     // Check if store exists
-    if !stores.contains_key(&name) {
+    if !stores.contains_key(&store_id) {
         return Err("Store not found".to_string());
     }
 
@@ -366,7 +361,7 @@ pub async fn set_using_store(name: String) -> Result<(), String> {
         store.using = false;
     }
 
-    if let Some(store) = stores.get_mut(&name) {
+    if let Some(store) = stores.get_mut(&store_id) {
         store.using = true;
 
         // Also write the store's settings to the user's actual settings.json
@@ -427,28 +422,23 @@ pub async fn update_store(store_id: String, name: String, settings: Value) -> Re
         .map_err(|e| format!("Failed to parse stores file: {}", e))?;
 
     // Find the store by ID
-    let (old_name, mut store) = stores
-        .iter()
-        .find(|(_, store)| store.id == store_id)
-        .map(|(name, store)| (name.clone(), store.clone()))
+    let mut store = stores.get(&store_id)
+        .cloned()
         .ok_or_else(|| format!("Store with id '{}' not found", store_id))?;
 
-    // If name changed, check if new name already exists
-    if old_name != name && stores.contains_key(&name) {
-        return Err("Store with this name already exists".to_string());
+    // Check if new name conflicts with existing stores (excluding current one)
+    for existing_store in stores.values() {
+        if existing_store.id != store_id && existing_store.name == name {
+            return Err("Store with this name already exists".to_string());
+        }
     }
 
     // Update the store
     store.name = name.clone();
     store.settings = settings;
 
-    // If name changed, remove old entry
-    if old_name != name {
-        stores.remove(&old_name);
-    }
-
-    // Insert updated store
-    stores.insert(name.clone(), store.clone());
+    // Insert updated store (using ID as key)
+    stores.insert(store_id.clone(), store.clone());
 
     // If this store is currently in use, also update the user's settings.json
     if store.using {

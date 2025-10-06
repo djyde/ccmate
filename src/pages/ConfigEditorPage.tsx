@@ -641,7 +641,7 @@ export function ConfigEditorPage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 ">
       <nav className="px-2 py-2 flex items-center justify-between sticky top-0 bg-background z-10 border-b" data-tauri-drag-region>
         <Link to="/" className="inline-flex items-center gap-1 cursor-default hover:bg-zinc-50 rounded-lg p-2">
           <ChevronLeftIcon size={14} className="text-muted-foreground" />

@@ -16,8 +16,8 @@ export function Layout() {
       >
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <nav className="w-[200px] bg-zinc-50 border-r" data-tauri-drag-region>
+      <div className="flex flex-1 overflow-hidden ">
+        <nav className="w-[200px] bg-zinc-50 border-r " data-tauri-drag-region >
           <div
             data-tauri-drag-region
             className="h-10"
