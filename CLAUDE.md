@@ -32,6 +32,10 @@ pnpm build
 
 # Preview built app
 pnpm preview
+
+# Check TypeScript lint error
+
+pnpm tsc --noEmit
 ```
 
 ## Architecture
@@ -64,9 +68,9 @@ The app handles these configuration file types:
 - Use functional components and hooks
 - Do not use export default to export components
 - Place React Query/mutation logic in `src/lib/query.ts` by default
-- Place form handling logic in component files or in `src/lib/form.ts`
 - Write Tauri commands in `src-tauri/src/commands.rs` with well-designed names
 - Do not separate components into smaller files unless explicitly requested
+- Use `pnpm tsc --noEmit` to check TypeScript lint errors after modifying frontend code
 
 ## Important Notes
 
