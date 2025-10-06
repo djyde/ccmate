@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tansta
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { nanoid } from "nanoid";
+import i18n from "../i18n";
 
 export type ConfigType =
   | "user"
@@ -55,13 +56,13 @@ export const useWriteConfigFile = () => {
     mutationFn: ({ configType, content }: { configType: ConfigType; content: unknown }) =>
       invoke<void>("write_config_file", { configType, content }),
     onSuccess: (_, variables) => {
-      toast.success(`Configuration "${variables.configType}" saved successfully`);
+      toast.success(i18n.t("toast.configSaved", { configType: variables.configType }));
       queryClient.invalidateQueries({ queryKey: ["config-file", variables.configType] });
       queryClient.invalidateQueries({ queryKey: ["config-files"] });
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to save configuration: ${errorMessage}`);
+      toast.error(i18n.t("toast.configSaveFailed", { error: errorMessage }));
     },
   });
 };
@@ -71,11 +72,11 @@ export const useBackupClaudeConfigs = () => {
   return useMutation({
     mutationFn: () => invoke<void>("backup_claude_configs"),
     onSuccess: () => {
-      toast.success("Claude configurations backed up successfully");
+      toast.success(i18n.t("toast.backupSuccess"));
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to backup configurations: ${errorMessage}`);
+      toast.error(i18n.t("toast.backupFailed", { error: errorMessage }));
     },
   });
 };
@@ -115,13 +116,13 @@ export const useCreateStore = () => {
       return invoke<ConfigStore>("create_store", { id, title, settings });
     },
     onSuccess: () => {
-      // toast.success(`Store created successfully`);
+      toast.success(i18n.t("toast.storeCreated"));
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to create store: ${errorMessage}`);
+      toast.error(i18n.t("toast.storeCreateFailed", { error: errorMessage }));
     },
   });
 };
@@ -136,13 +137,13 @@ export const useDeleteStore = () => {
       storeId: body.storeId,
     }),
     onSuccess: () => {
-      toast.success(`Store deleted successfully`);
+      toast.success(i18n.t("toast.storeDeleted"));
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to delete store: ${errorMessage}`);
+      toast.error(i18n.t("toast.storeDeleteFailed", { error: errorMessage }));
     },
   });
 };
@@ -153,14 +154,14 @@ export const useSetUsingStore = () => {
   return useMutation({
     mutationFn: (storeId: string) => invoke<void>("set_using_store", { storeId }),
     onSuccess: () => {
-      toast.success(`Store activated successfully`);
+      toast.success(i18n.t("toast.storeActivated"));
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
       queryClient.invalidateQueries({ queryKey: ["config-file", "user"] });
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to switch store: ${errorMessage}`);
+      toast.error(i18n.t("toast.storeActivateFailed", { error: errorMessage }));
     },
   });
 };
@@ -185,7 +186,11 @@ export const useUpdateStore = () => {
     mutationFn: ({ storeId, title, settings }: { storeId: string; title: string; settings: unknown }) =>
       invoke<ConfigStore>("update_store", { storeId, title, settings }),
     onSuccess: (data) => {
-      toast.success(`Store "${data.title}" saved successfully`);
+      if (data.using) {
+        toast.success(i18n.t("toast.storeSavedAndActive", { title: data.title }));
+      } else {
+        toast.success(i18n.t("toast.storeSaved", { title: data.title }));
+      }
       queryClient.invalidateQueries({ queryKey: ["stores"] });
       queryClient.invalidateQueries({ queryKey: ["store", data.id] });
       queryClient.invalidateQueries({ queryKey: ["current-store"] });
@@ -195,7 +200,7 @@ export const useUpdateStore = () => {
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to save store: ${errorMessage}`);
+      toast.error(i18n.t("toast.storeSaveFailed", { error: errorMessage }));
     },
   });
 };
@@ -225,12 +230,12 @@ export const useInstallAndRestart = () => {
     },
     onSuccess: () => {
       console.log("✅ Frontend: Update installation completed, preparing to restart");
-      toast.success("Update installed successfully. Restarting...");
+      toast.success(i18n.t("toast.updateInstalled"));
     },
     onError: (error) => {
       console.log("❌ Frontend: Update installation failed", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      toast.error(`Failed to install update: ${errorMessage}`);
+      toast.error(i18n.t("toast.updateInstallFailed", { error: errorMessage }));
     },
   });
 };

@@ -1,11 +1,26 @@
 import React from "react";
 import { Outlet, NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { cn } from "../lib/utils";
-import { FileJsonIcon } from "lucide-react";
+import { FileJsonIcon, SettingsIcon } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { UpdateButton } from "./UpdateButton";
 
 export function Layout() {
+  const { t } = useTranslation();
+
+  const navLinks = [
+    {
+      to: "/",
+      icon: FileJsonIcon,
+      label: t("navigation.configurations")
+    },
+    {
+      to: "/settings",
+      icon: SettingsIcon,
+      label: t("navigation.settings")
+    }
+  ]
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -26,24 +41,26 @@ export function Layout() {
           >
           </div>
           <div className="flex flex-col flex-1 justify-between" data-tauri-drag-region>
-            <ul className="px-3 pt-3">
-              <li>
-                <NavLink
-                  to="/"
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-xl cursor-default select-none ",
-                      {
-                        "bg-primary text-primary-foreground": isActive,
-                        "hover:bg-zinc-100": !isActive
-                      }
-                    )
-                  }
-                >
-                  <FileJsonIcon size={14} />
-                  配置
-                </NavLink>
-              </li>
+            <ul className="px-3 pt-3 space-y-2">
+              {navLinks.map((link) => (
+                <li key={link.to}>
+                  <NavLink
+                    to={link.to}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-xl cursor-default select-none ",
+                        {
+                          "bg-primary text-primary-foreground": isActive,
+                          "hover:bg-zinc-200": !isActive
+                        }
+                      )
+                    }
+                  >
+                    <link.icon size={14} />
+                    {link.label}
+                  </NavLink>
+                </li>
+              ))}
             </ul>
             <div className="">
               <UpdateButton />

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useStores, useSetCurrentStore, useCreateStore } from "../lib/query";
 import { cn } from "@/lib/utils";
 import { PencilLineIcon, PlusIcon } from "lucide-react";
@@ -15,6 +16,7 @@ export function ConfigSwitcherPage() {
 }
 
 function ConfigStores() {
+  const { t } = useTranslation();
   const { data: stores } = useStores();
   const setCurrentStoreMutation = useSetCurrentStore();
   const navigate = useNavigate();
@@ -28,7 +30,7 @@ function ConfigStores() {
 
   const onCreateStore = async () => {
     const store = await createStoreMutation.mutateAsync({
-      title: "新配置",
+      title: t("configSwitcher.newConfig"),
       settings: {},
     });
     navigate(`/edit/${store.id}`);
@@ -39,7 +41,7 @@ function ConfigStores() {
       <div className="flex justify-center items-center h-screen">
         <Button variant="ghost" onClick={onCreateStore} className="">
           <PlusIcon size={14} />
-          新建配置
+          {t("configSwitcher.createConfig")}
         </Button>
       </div>
     )
@@ -50,7 +52,7 @@ function ConfigStores() {
       <div className="flex my-4 mt-3" data-tauri-drag-region>
         <Button variant="ghost" onClick={onCreateStore} className="" size="sm">
           <PlusIcon size={14} />
-          新建配置
+          {t("configSwitcher.createConfig")}
         </Button>
       </div>
       <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">

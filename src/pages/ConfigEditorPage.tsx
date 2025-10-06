@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { set, get, transform, isEmpty, isPlainObject } from "lodash-es";
 import { match } from "ts-pattern";
@@ -88,9 +89,9 @@ function convertToNestedJSON(formData: Record<string, any>) {
   };
 }
 
-const fields: SectionConfig[] = [
+const createFields = (t: (key: string) => string): SectionConfig[] => [
   {
-    sectionName: "常用",
+    sectionName: t("configEditor.sections.common"),
     fields: [
       {
         label: "ANTHROPIC_BASE_URL",
@@ -144,7 +145,7 @@ const fields: SectionConfig[] = [
     ]
   },
   {
-    sectionName: "General Settings",
+    sectionName: t("configEditor.sections.generalSettings"),
     fields: [
       {
         label: "API Key Helper",
@@ -189,7 +190,7 @@ const fields: SectionConfig[] = [
     ]
   },
   {
-    sectionName: "Authentication & Login",
+    sectionName: t("configEditor.sections.authLogin"),
     fields: [
       {
         label: "Force Login Method",
@@ -209,7 +210,7 @@ const fields: SectionConfig[] = [
     ]
   },
   {
-    sectionName: "MCP Configuration",
+    sectionName: t("configEditor.sections.mcpConfig"),
     fields: [
       {
         label: "Enable All Project MCP Servers",
@@ -240,7 +241,7 @@ const fields: SectionConfig[] = [
     ]
   },
   {
-    sectionName: "AWS Configuration",
+    sectionName: t("configEditor.sections.awsConfig"),
     fields: [
       {
         label: "AWS Auth Refresh",
@@ -259,7 +260,7 @@ const fields: SectionConfig[] = [
     ]
   },
   {
-    sectionName: "Environment Variables",
+    sectionName: t("configEditor.sections.environmentVars"),
     fields: [
       {
         label: "ANTHROPIC_CUSTOM_HEADERS",
@@ -566,9 +567,10 @@ const fields: SectionConfig[] = [
       }
     ]
   }
-]
+];
 
 export function ConfigEditorPage() {
+  const { t } = useTranslation();
   const { storeId } = useParams();
   const navigate = useNavigate();
 
@@ -577,6 +579,8 @@ export function ConfigEditorPage() {
   const deleteStore = useDeleteStore();
 
   const storeData = storeQuery.data;
+
+  const fields = createFields(t);
 
   // Prepare default values from store data
   const defaultValues: Record<string, any> = { configName: storeData.title };
@@ -645,8 +649,8 @@ export function ConfigEditorPage() {
 
   const onDelete = async () => {
     const confirmed = await ask(
-      `确定要删除配置 "${storeData.title}" 吗？此操作无法撤销。`,
-      { title: "删除配置", kind: "warning" }
+      t("configEditor.deleteConfirm", { name: storeData.title }),
+      { title: t("configEditor.deleteTitle"), kind: "warning" }
     );
 
     if (confirmed) {
@@ -663,7 +667,7 @@ export function ConfigEditorPage() {
         <Button asChild variant="ghost" size="sm">
           <Link to="/" className="">
             <ChevronLeftIcon size={14} className="text-muted-foreground" />
-            <span className="text-muted-foreground">所有配置</span>
+            <span className="text-muted-foreground">{t("configSwitcher.allConfigs")}</span>
           </Link>
         </Button>
 
@@ -684,14 +688,14 @@ export function ConfigEditorPage() {
             disabled={updateStore.isPending}
             size="sm"
           >
-            保存
+            {t("configEditor.save")}
           </Button>
 
         </div>
       </nav>
 
       <section className="px-8">
-        <h3 className="pb-2 font-medium mx-2 text-muted-foreground text-sm">配置名</h3>
+        <h3 className="pb-2 font-medium mx-2 text-muted-foreground text-sm">{t("configEditor.configName")}</h3>
         <input
           {...register("configName")}
           type="text"

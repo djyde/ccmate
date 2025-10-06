@@ -1,8 +1,10 @@
 import { useCheckForUpdates, useInstallAndRestart } from "../lib/query";
 import { RotateCwIcon, RefreshCcwIcon } from "lucide-react";
 import { cn } from "../lib/utils";
+import { useTranslation } from "react-i18next";
 
 export function UpdateButton() {
+  const { t } = useTranslation();
   const { data: updateInfo, isLoading, error } = useCheckForUpdates();
   const installAndRestart = useInstallAndRestart();
 
@@ -29,12 +31,12 @@ export function UpdateButton() {
           {installAndRestart.isPending ? (
             <>
               <RotateCwIcon className="mr-2 h-4 w-4 animate-spin" />
-              安装中...
+              {t("updateButton.installing")}
             </>
           ) : (
             <>
               <RefreshCcwIcon className="h-4 w-4" />
-              有新版本可更新
+              {t("updateButton.newVersionAvailable")}
             </>
           )}
         </button>
