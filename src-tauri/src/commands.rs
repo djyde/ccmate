@@ -241,7 +241,50 @@ pub async fn get_stores() -> Result<Vec<ConfigStore>, String> {
     let stores_file = app_config_path.join("stores.json");
 
     if !stores_file.exists() {
-        return Ok(vec![]);
+        // Check if there's an existing ~/.claude/settings.json
+        let claude_settings_path = home_dir.join(".claude/settings.json");
+
+        if claude_settings_path.exists() {
+            // Read existing settings
+            let settings_content = std::fs::read_to_string(&claude_settings_path)
+                .map_err(|e| format!("Failed to read existing Claude settings: {}", e))?;
+
+            let settings_json: Value = serde_json::from_str(&settings_content)
+                .map_err(|e| format!("Failed to parse existing Claude settings: {}", e))?;
+
+            // Create a default store named "原有配置" with existing settings
+            let default_store = ConfigStore {
+                id: nanoid::nanoid!(6), // Generate a 6-character ID
+                title: "原有配置".to_string(),
+                createdAt: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_err(|e| format!("Failed to get timestamp: {}", e))?
+                    .as_secs(),
+                settings: settings_json,
+                using: true, // Set as the active store by default
+            };
+
+            // Ensure app config directory exists
+            std::fs::create_dir_all(&app_config_path)
+                .map_err(|e| format!("Failed to create app config directory: {}", e))?;
+
+            // Create stores.json with the default store
+            let stores_data = StoresData {
+                configs: vec![default_store.clone()]
+            };
+
+            let json_content = serde_json::to_string_pretty(&stores_data)
+                .map_err(|e| format!("Failed to serialize stores: {}", e))?;
+
+            std::fs::write(&stores_file, json_content)
+                .map_err(|e| format!("Failed to write stores file: {}", e))?;
+
+            println!("Created default store '原有配置' from existing settings.json");
+
+            return Ok(vec![default_store]);
+        } else {
+            return Ok(vec![]);
+        }
     }
 
     let content = std::fs::read_to_string(&stores_file)
