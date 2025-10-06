@@ -199,3 +199,46 @@ export const useUpdateStore = () => {
     },
   });
 };
+
+export interface UpdateInfo {
+  available: boolean;
+  version?: string;
+  body?: string;
+  date?: string;
+}
+
+export const useCheckForUpdates = () => {
+  return useQuery({
+    queryKey: ["check-updates"],
+    queryFn: () => {
+      console.log("🔄 Frontend: Checking for updates via Tauri command");
+      return invoke<UpdateInfo>("check_for_updates");
+    },
+    refetchInterval: 1000 * 60 * 30, // Check every 30 minutes
+    retry: 1,
+    onSuccess: (data) => {
+      console.log("✅ Frontend: Update check completed", data);
+    },
+    onError: (error) => {
+      console.log("❌ Frontend: Update check failed", error);
+    },
+  });
+};
+
+export const useInstallAndRestart = () => {
+  return useMutation({
+    mutationFn: () => {
+      console.log("🚀 Frontend: Starting update installation");
+      return invoke<void>("install_and_restart");
+    },
+    onSuccess: () => {
+      console.log("✅ Frontend: Update installation completed, preparing to restart");
+      toast.success("Update installed successfully. Restarting...");
+    },
+    onError: (error) => {
+      console.log("❌ Frontend: Update installation failed", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`Failed to install update: ${errorMessage}`);
+    },
+  });
+};

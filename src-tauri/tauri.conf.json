@@ -34,5 +34,13 @@
     "icon": [
       "icons/icon.icns"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE5NjU1MUZBRDYxQTY1ODcKUldTSFpSclcrbEZsR1ptZ3Z0a3hJNEx0RHpGQ29ZQVhJWDZZN3JOMnBBd29YdzA5ZmRsNzloRlEK",
+      "endpoints": [
+        "https://github.com/djyde/ccmate-release/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

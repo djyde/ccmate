@@ -5,6 +5,7 @@ use commands::*;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -21,7 +22,7 @@ pub fn run() {
             }
 
             // Create application menu
-            use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder, PredefinedMenuItem};
+            use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 
             let open_config_item = MenuItemBuilder::with_id("open_config_path", "Open config path")
                 .accelerator("CmdOrCtrl+Shift+O")
@@ -45,9 +46,11 @@ pub fn run() {
                 .item(&PredefinedMenuItem::hide_others(app, None)?)
                 .item(&PredefinedMenuItem::show_all(app, None)?)
                 .item(&separator)
-                .item(&MenuItemBuilder::with_id("quit", format!("Quit {}", app_name))
-                    .accelerator("CmdOrCtrl+Q")
-                    .build(app)?)
+                .item(
+                    &MenuItemBuilder::with_id("quit", format!("Quit {}", app_name))
+                        .accelerator("CmdOrCtrl+Q")
+                        .build(app)?,
+                )
                 .build()?;
 
             // File menu
@@ -78,8 +81,7 @@ pub fn run() {
                 .build()?;
 
             // Help menu
-            let help_menu = SubmenuBuilder::new(app, "Help")
-                .build()?;
+            let help_menu = SubmenuBuilder::new(app, "Help").build()?;
 
             let menu = MenuBuilder::new(app)
                 .item(&app_menu)
@@ -139,7 +141,9 @@ pub fn run() {
             delete_store,
             set_using_store,
             get_current_store,
-            open_config_path
+            open_config_path,
+            check_for_updates,
+            install_and_restart
         ])
         .on_window_event(|window, event| {
             #[cfg(target_os = "macos")]
