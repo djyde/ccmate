@@ -12,6 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_os::init())
         .setup(|app| {
             // Configure window for macOS
             #[cfg(target_os = "macos")]

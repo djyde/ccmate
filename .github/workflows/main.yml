@@ -19,9 +19,9 @@ jobs:
           # for Universal macOS builds (arm64 and x86_64)
           - platform: "macos-latest"
             args: "--target universal-apple-darwin"
-          # # for Windows builds
-          # - platform: "windows-latest"
-          #   args: "--target x86_64-pc-windows-msvc"
+          # for Windows builds
+          - platform: "windows-latest"
+            args: "--target x86_64-pc-windows-msvc"
 
     runs-on: ${{ matrix.platform }}
     steps:

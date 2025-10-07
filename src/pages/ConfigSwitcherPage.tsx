@@ -74,7 +74,12 @@ function ConfigStores() {
               })}
             >
               <div>
-                {store.title}
+                <div>{store.title}</div>
+                {store.settings.env?.ANTHROPIC_BASE_URL && (
+                  <div className="text-xs text-muted-foreground mt-1 truncate " title={store.settings.env.ANTHROPIC_BASE_URL}>
+                    {store.settings.env.ANTHROPIC_BASE_URL}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end">
