@@ -1,12 +1,12 @@
 import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ExternalLinkIcon, HammerIcon, PlusIcon, SaveIcon } from "lucide-react";
 import { useGlobalMcpServers, useUpdateGlobalMcpServer, type McpServer } from "@/lib/query";
 import { toast } from "sonner";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { DialogDescription } from "@radix-ui/react-dialog";
+import { match } from "ts-pattern";
 
 function MCPPageContent() {
   const { data: mcpServers } = useGlobalMcpServers();
@@ -59,14 +59,14 @@ function MCPPageContent() {
               添加 MCP 服务
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-[700px]">
+          <DialogContent className="max-w-[700px] h-[500px]">
             <DialogHeader>
               <DialogTitle className="text-primary text-sm">添加 MCP 服务</DialogTitle>
               <DialogDescription className="text-muted-foreground text-sm">
                 添加全局 MCP 服务，可跨项目使用
               </DialogDescription>
             </DialogHeader>
-            <div className="py-3">
+            <div className="py-3 mt-3">
               <MCPCreatePanel />
             </div>
             {/* <div className="flex justify-end">
@@ -160,34 +160,63 @@ const builtInMcpServers = [
 ];
 
 function MCPCreatePanel() {
+  const [currentTab, setCurrentTab] = useState<("recommend" | "manual")>("recommend");
+
   return (
     <div className="">
-      <div className="grid grid-cols-3 gap-5">
-        {builtInMcpServers.map((mcpServer) => (
-          <a role="button" key={mcpServer.name} className="border p-3 rounded-md h-[120px] flex justify-between flex-col hover:bg-primary/10 hover:border-primary/20 hover:text-primary">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-primary">{mcpServer.name}</h3>
-              <a onClick={e => {
-                e.stopPropagation()
-                openUrl(mcpServer.source)
-              }} className="text-sm text-muted-foreground flex items-center gap-1 hover:underline">
-                <ExternalLinkIcon size={12} />
-                Source
-              </a>
-            </div>
-            <div>
-
-            </div>
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">{mcpServer.description}</p>
-              {/* <Button size="sm" variant="outline" className="w-full text-sm">
-                <PlusIcon />
-                添加
-              </Button> */}
-            </div>
-          </a>
-        ))}
+      <div className="flex mb-3 gap-1">
+        <Button size="sm" variant={
+          currentTab === "recommend" ? "secondary" : "ghost"
+        } className="text-sm" onClick={() => setCurrentTab("recommend")}>
+          推荐
+        </Button>
+        <Button size="sm" variant={
+          currentTab === "manual" ? "secondary" : "ghost"
+        } className="text-sm" onClick={() => setCurrentTab("manual")}>
+          自定义
+        </Button>
       </div>
+
+      {match(currentTab)
+        .with("recommend", ()=> {
+          return (
+            <div className="grid grid-cols-3 gap-5">
+            {builtInMcpServers.map((mcpServer) => (
+              <a role="button" key={mcpServer.name} className="border p-3 rounded-md h-[120px] flex justify-between flex-col hover:bg-primary/10 hover:border-primary/20 hover:text-primary">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-bold text-primary">{mcpServer.name}</h3>
+                  <a onClick={e => {
+                    e.stopPropagation()
+                    openUrl(mcpServer.source)
+                  }} className="text-sm text-muted-foreground flex items-center gap-1 hover:underline">
+                    <ExternalLinkIcon size={12} />
+                    Source
+                  </a>
+                </div>
+                <div>
+    
+                </div>
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{mcpServer.description}</p>
+                  {/* <Button size="sm" variant="outline" className="w-full text-sm">
+                    <PlusIcon />
+                    添加
+                  </Button> */}
+                </div>
+              </a>
+            ))}
+          </div>
+          )
+        })
+        .with("manual", ()=> {
+          return (
+            <div className="">
+              <p>手动安装</p>
+            </div>
+          )
+        })
+        .exhaustive()
+      }
     </div>
   );
 }
