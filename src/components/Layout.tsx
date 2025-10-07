@@ -5,9 +5,11 @@ import { cn } from "../lib/utils";
 import { FileJsonIcon, SettingsIcon, CpuIcon } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { UpdateButton } from "./UpdateButton";
+import { usePlatform } from "../hooks/usePlatform";
 
 export function Layout() {
   const { t } = useTranslation();
+  const { isMacOS } = usePlatform();
 
   const navLinks = [
     {
@@ -29,22 +31,26 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Custom Title Bar - Draggable Region with traffic lights space */}
-      <div
-        data-tauri-drag-region
-        className=""
-        style={{ WebkitUserSelect: 'none', WebkitAppRegion: 'drag' } as React.CSSProperties}
-      >
-      </div>
+      {/* Custom Title Bar - Draggable Region with traffic lights space (macOS only) */}
+      {isMacOS && (
+        <div
+          data-tauri-drag-region
+          className=""
+          style={{ WebkitUserSelect: 'none', WebkitAppRegion: 'drag' } as React.CSSProperties}
+        >
+        </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden ">
         <nav className="w-[200px] bg-zinc-50 border-r flex flex-col" data-tauri-drag-region >
-          <div
-            data-tauri-drag-region
-            className="h-10"
-            style={{ WebkitUserSelect: 'none', WebkitAppRegion: 'drag' } as React.CSSProperties}
-          >
-          </div>
+          {isMacOS && (
+            <div
+              data-tauri-drag-region
+              className="h-10"
+              style={{ WebkitUserSelect: 'none', WebkitAppRegion: 'drag' } as React.CSSProperties}
+            >
+            </div>
+          )}
           <div className="flex flex-col flex-1 justify-between" data-tauri-drag-region>
             <ul className="px-3 pt-3 space-y-2">
               {navLinks.map((link) => (

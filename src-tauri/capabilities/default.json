@@ -8,6 +8,7 @@
     "opener:default",
     "core:window:allow-start-dragging",
     "dialog:allow-ask",
-    "dialog:allow-message"
+    "dialog:allow-message",
+    "os:allow-platform"
   ]
 }

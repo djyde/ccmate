@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useStores, useSetCurrentConfig, useCreateConfig } from "../lib/query";
 import { cn } from "@/lib/utils";
-import { LinkIcon, PencilLineIcon, PlusIcon } from "lucide-react";
+import { PencilLineIcon, PlusIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
