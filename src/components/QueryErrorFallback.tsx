@@ -14,7 +14,7 @@ export function QueryErrorFallback({ error, resetErrorBoundary }: QueryErrorFall
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Failed to load data</AlertTitle>
-          <AlertDescription>
+          <AlertDescription className="select-text">
             {error.message || "An unexpected error occurred while fetching data."}
           </AlertDescription>
         </Alert>

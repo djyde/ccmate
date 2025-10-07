@@ -70,7 +70,7 @@ The app handles these configuration file types:
 - Place React Query/mutation logic in `src/lib/query.ts` by default
 - Write Tauri commands in `src-tauri/src/commands.rs` with well-designed names
 - Do not separate components into smaller files unless explicitly requested
-- Use `pnpm tsc --noEmit` to check TypeScript lint errors after modifying frontend code
+- Use `pnpm tsc --noEmit` instead of `pnpm tauri dev` to check TypeScript lint errors after modifying frontend code
 
 ## Important Notes
 

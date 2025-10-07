@@ -61,10 +61,10 @@ export class ErrorBoundary extends Component<Props, State> {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Something went wrong</AlertTitle>
               <AlertDescription className="mt-2">
-                <div className="font-medium mb-1">
+                <div className="font-medium mb-1 select-text">
                   {this.state.error?.message || "An unexpected error occurred"}
                 </div>
-                <div className="text-sm opacity-90">
+                <div className="text-sm opacity-90 select-text">
                   Please try reloading the page or return to the home page.
                 </div>
               </AlertDescription>
@@ -73,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.error && (
               <div className="bg-muted p-4 rounded-lg">
                 <h3 className="font-semibold mb-2 text-sm">Stack Trace:</h3>
-                <pre className="text-xs overflow-auto max-h-60 text-muted-foreground whitespace-pre-wrap break-words">
+                <pre className="text-xs overflow-auto max-h-60 text-muted-foreground whitespace-pre-wrap break-words select-text cursor-text">
                   {this.state.error.stack || this.state.error.toString()}
                   {this.state.errorInfo?.componentStack}
                 </pre>

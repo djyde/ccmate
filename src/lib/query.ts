@@ -34,6 +34,10 @@ export interface ConfigStore {
   using: boolean;
 }
 
+export interface McpServer {
+  config: Record<string, any>;
+}
+
 export const useConfigFiles = () => {
   return useQuery({
     queryKey: ["config-files"],
@@ -239,6 +243,73 @@ export const useInstallAndRestart = () => {
       console.log("❌ Frontend: Update installation failed", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(i18n.t("toast.updateInstallFailed", { error: errorMessage }));
+    },
+  });
+};
+
+// MCP Server management hooks
+
+export const useGlobalMcpServers = () => {
+  return useSuspenseQuery({
+    queryKey: ["global-mcp-servers"],
+    queryFn: () => invoke<Record<string, McpServer>>("get_global_mcp_servers"),
+  });
+};
+
+export const useUpdateGlobalMcpServer = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ serverName, serverConfig }: { serverName: string; serverConfig: Record<string, any> }) =>
+      invoke<void>("update_global_mcp_server", { serverName, serverConfig }),
+    onSuccess: () => {
+      toast.success("MCP server configuration updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["global-mcp-servers"] });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`Failed to update MCP server: ${errorMessage}`);
+    },
+  });
+};
+
+export const useAddGlobalMcpServer = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ serverName, serverConfig }: { serverName: string; serverConfig: Record<string, any> }) =>
+      invoke<void>("update_global_mcp_server", { serverName, serverConfig }),
+    onSuccess: () => {
+      toast.success("MCP server added successfully");
+      queryClient.invalidateQueries({ queryKey: ["global-mcp-servers"] });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`Failed to add MCP server: ${errorMessage}`);
+    },
+  });
+};
+
+export const useCheckMcpServerExists = (serverName: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ["check-mcp-server-exists", serverName],
+    queryFn: () => invoke<boolean>("check_mcp_server_exists", { serverName }),
+    enabled: options?.enabled !== false && !!serverName, // Only run when serverName is provided
+  });
+};
+
+export const useDeleteGlobalMcpServer = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (serverName: string) => invoke<void>("delete_global_mcp_server", { serverName }),
+    onSuccess: () => {
+      toast.success("MCP server deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["global-mcp-servers"] });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`Failed to delete MCP server: ${errorMessage}`);
     },
   });
 };

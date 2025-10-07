@@ -4,6 +4,7 @@ import { Layout } from "./components/Layout";
 import { ConfigSwitcherPage } from "./pages/ConfigSwitcherPage";
 import { ConfigEditorPage } from "./pages/ConfigEditorPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { MCPPage } from "./pages/MCPPage";
 
 const router = createBrowserRouter([
   {
@@ -35,6 +36,14 @@ const router = createBrowserRouter([
         element: (
           <RouteWrapper>
             <SettingsPage />
+          </RouteWrapper>
+        ),
+      },
+      {
+        path: "mcp",
+        element: (
+          <RouteWrapper>
+            <MCPPage />
           </RouteWrapper>
         ),
       },
