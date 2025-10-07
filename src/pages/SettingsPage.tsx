@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLinkIcon, DownloadIcon, RotateCwIcon } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCheckForUpdates, useInstallAndRestart } from "@/lib/query";
-import { FaTwitter, FaX, FaXTwitter } from "react-icons/fa6";
+import { FaXTwitter } from "react-icons/fa6";
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation();
