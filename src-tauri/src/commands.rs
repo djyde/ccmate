@@ -614,12 +614,13 @@ pub async fn get_global_mcp_servers() -> Result<std::collections::HashMap<String
     let json_value: Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse .claude.json: {}", e))?;
 
-    let mcp_servers = json_value.get("mcpServers")
+    let mcp_servers_obj = json_value.get("mcpServers")
         .and_then(|servers| servers.as_object())
-        .ok_or("No mcpServers found in .claude.json")?;
+        .cloned()
+        .unwrap_or_else(serde_json::Map::new);
 
     let mut result = std::collections::HashMap::new();
-    for (name, config) in mcp_servers {
+    for (name, config) in mcp_servers_obj {
         let mcp_server = McpServer {
             config: config.clone(),
         };
@@ -696,8 +697,12 @@ pub async fn delete_global_mcp_server(server_name: String) -> Result<(), String>
         .as_object_mut()
         .unwrap()
         .get_mut("mcpServers")
-        .and_then(|servers| servers.as_object_mut())
-        .ok_or("No mcpServers found in .claude.json")?;
+        .and_then(|servers| servers.as_object_mut());
+
+    let mcp_servers = match mcp_servers {
+        Some(servers) => servers,
+        None => return Err("No mcpServers found in .claude.json".to_string()),
+    };
 
     // Check if the server exists
     if !mcp_servers.contains_key(&server_name) {
