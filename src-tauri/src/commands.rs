@@ -385,6 +385,11 @@ pub async fn create_config(
     std::fs::write(&stores_file, json_content)
         .map_err(|e| format!("Failed to write stores file: {}", e))?;
 
+    // Automatically unlock CC extension when creating new config
+    if let Err(e) = unlock_cc_ext().await {
+        eprintln!("Warning: Failed to unlock CC extension: {}", e);
+    }
+
     Ok(new_store)
 }
 
@@ -555,6 +560,11 @@ pub async fn update_config(
     std::fs::write(&stores_file, json_content)
         .map_err(|e| format!("Failed to write stores file: {}", e))?;
 
+    // Automatically unlock CC extension when updating config
+    if let Err(e) = unlock_cc_ext().await {
+        eprintln!("Warning: Failed to unlock CC extension: {}", e);
+    }
+
     Ok(stores_data.configs[store_index].clone())
 }
 
@@ -614,12 +624,13 @@ pub async fn get_global_mcp_servers() -> Result<std::collections::HashMap<String
     let json_value: Value = serde_json::from_str(&content)
         .map_err(|e| format!("Failed to parse .claude.json: {}", e))?;
 
-    let mcp_servers = json_value.get("mcpServers")
+    let mcp_servers_obj = json_value.get("mcpServers")
         .and_then(|servers| servers.as_object())
-        .ok_or("No mcpServers found in .claude.json")?;
+        .cloned()
+        .unwrap_or_else(serde_json::Map::new);
 
     let mut result = std::collections::HashMap::new();
-    for (name, config) in mcp_servers {
+    for (name, config) in mcp_servers_obj {
         let mcp_server = McpServer {
             config: config.clone(),
         };
@@ -696,8 +707,12 @@ pub async fn delete_global_mcp_server(server_name: String) -> Result<(), String>
         .as_object_mut()
         .unwrap()
         .get_mut("mcpServers")
-        .and_then(|servers| servers.as_object_mut())
-        .ok_or("No mcpServers found in .claude.json")?;
+        .and_then(|servers| servers.as_object_mut());
+
+    let mcp_servers = match mcp_servers {
+        Some(servers) => servers,
+        None => return Err("No mcpServers found in .claude.json".to_string()),
+    };
 
     // Check if the server exists
     if !mcp_servers.contains_key(&server_name) {
@@ -783,6 +798,61 @@ pub async fn check_for_updates(app: tauri::AppHandle) -> Result<UpdateInfo, Stri
 #[tauri::command]
 pub async fn rebuild_tray_menu_command(app: tauri::AppHandle) -> Result<(), String> {
     crate::tray::rebuild_tray_menu(app).await
+}
+
+#[tauri::command]
+pub async fn unlock_cc_ext() -> Result<(), String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let claude_config_path = home_dir.join(".claude/config.json");
+
+    // Ensure .claude directory exists
+    if let Some(parent) = claude_config_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create .claude directory: {}", e))?;
+    }
+
+    if claude_config_path.exists() {
+        // File exists, check if primaryApiKey key exists
+        let content = std::fs::read_to_string(&claude_config_path)
+            .map_err(|e| format!("Failed to read config.json: {}", e))?;
+
+        let mut json_value: Value = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse config.json: {}", e))?;
+
+        // Check if primaryApiKey exists
+        if json_value.get("primaryApiKey").is_none() {
+            // Add primaryApiKey to existing config
+            if let Some(obj) = json_value.as_object_mut() {
+                obj.insert("primaryApiKey".to_string(), Value::String("xxx".to_string()));
+            }
+
+            // Write back to file
+            let json_content = serde_json::to_string_pretty(&json_value)
+                .map_err(|e| format!("Failed to serialize JSON: {}", e))?;
+
+            std::fs::write(&claude_config_path, json_content)
+                .map_err(|e| format!("Failed to write config.json: {}", e))?;
+
+            println!("Added primaryApiKey to existing config.json");
+        } else {
+            println!("primaryApiKey already exists in config.json, no action needed");
+        }
+    } else {
+        // File doesn't exist, create it with primaryApiKey
+        let config = serde_json::json!({
+            "primaryApiKey": "xxx"
+        });
+
+        let json_content = serde_json::to_string_pretty(&config)
+            .map_err(|e| format!("Failed to serialize JSON: {}", e))?;
+
+        std::fs::write(&claude_config_path, json_content)
+            .map_err(|e| format!("Failed to write config.json: {}", e))?;
+
+        println!("Created new config.json with primaryApiKey");
+    }
+
+    Ok(())
 }
 
 #[tauri::command]

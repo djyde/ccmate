@@ -1,9 +1,18 @@
 import { useTranslation } from "react-i18next";
 import { useStores, useSetCurrentConfig, useCreateConfig } from "../lib/query";
 import { cn } from "@/lib/utils";
-import { PencilLineIcon, PlusIcon } from "lucide-react";
+import { EllipsisVerticalIcon, PencilLineIcon, PlusIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { GLMDialog } from "@/components/GLMBanner";
+import { ZAI } from "@lobehub/icons";
+import { ButtonGroup } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function ConfigSwitcherPage() {
   return (
@@ -38,30 +47,70 @@ function ConfigStores() {
 
   if (stores.length === 0) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Button variant="ghost" onClick={onCreateStore} className="">
-          <PlusIcon size={14} />
-          {t("configSwitcher.createConfig")}
-        </Button>
+      <div className="flex justify-center items-center h-screen" data-tauri-drag-region>
+        <div className="flex flex-col items-center gap-2">
+          <Button variant="ghost" onClick={onCreateStore} className="">
+            <PlusIcon size={14} />
+            {t("configSwitcher.createConfig")}
+          </Button>
+
+          <p className="text-sm text-muted-foreground" data-tauri-drag-region>
+            {t("configSwitcher.description")}
+          </p>
+
+          <div className="mt-4">
+            <GLMDialog
+              trigger={
+                <Button variant="ghost" className="text-muted-foreground text-sm" size="sm">
+                  <ZAI />
+                  使用智谱 GLM4.6
+                </Button>
+              }
+            />
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="">
-      <div className="flex items-center p-3 border-b px-3 justify-between sticky top-0 bg-background z-10 mb-4" data-tauri-drag-region>
+      <div className="flex items-center p-3 border-b px-3 justify-between sticky top-0 bg-background z-10" data-tauri-drag-region>
         <div data-tauri-drag-region>
           <h3 className="font-bold" data-tauri-drag-region>{t("configSwitcher.title")}</h3>
           <p className="text-sm text-muted-foreground" data-tauri-drag-region>
             {t("configSwitcher.description")}
           </p>
         </div>
-        <Button variant="ghost" onClick={onCreateStore} className="text-muted-foreground" size="sm">
-          <PlusIcon size={14} />
-          {t("configSwitcher.createConfig")}
-        </Button>
+        <ButtonGroup>
+          <Button variant="outline" onClick={onCreateStore} className="text-muted-foreground" size="sm">
+            <PlusIcon size={14} />
+            {t("configSwitcher.createConfig")}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="text-muted-foreground" size="sm">
+                <EllipsisVerticalIcon size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <GLMDialog
+                trigger={
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <ZAI />
+                    使用智谱 GLM4.6
+                  </DropdownMenuItem>
+                }
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </ButtonGroup>
+
       </div>
-      <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 px-4">
+
+      {/* <GLMBanner className="mx-4 mt-4" /> */}
+
+      <div className="grid grid-cols-3 lg:grid-cols-4 gap-3 p-4">
         {stores.map((store) => {
           const isCurrentStore = store.using
           return (
