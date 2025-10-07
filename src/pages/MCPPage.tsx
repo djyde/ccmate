@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { ask, message } from "@tauri-apps/plugin-dialog";
 import { match } from "ts-pattern";
+import CodeMirror from "@uiw/react-codemirror";
+import { json } from "@codemirror/lang-json";
+import { vscodeLight } from "@uiw/codemirror-theme-vscode";
 
 function MCPPageContent() {
   const { data: mcpServers } = useGlobalMcpServers();
@@ -111,13 +114,16 @@ function MCPPageContent() {
                 </AccordionTrigger>
                 <AccordionContent className="pb-3">
                   <div className="px-3 pt-3 space-y-3">
-                    <textarea
-                      value={serverConfigs[serverName] || formatConfigForDisplay(serverConfig)}
-                      onChange={(e) => handleConfigChange(serverName, e.target.value)}
-                      placeholder="Enter MCP server configuration as JSON"
-                      className="min-h-[100px] w-full p-2 text-md outline-none resize-none bg-white rounded-lg"
-                      spellCheck={false}
-                    />
+                    <div className="rounded-lg overflow-hidden border">
+                      <CodeMirror
+                        value={serverConfigs[serverName] || formatConfigForDisplay(serverConfig)}
+                        height="180px"
+                        theme={vscodeLight}
+                        extensions={[json()]}
+                        onChange={(value) => handleConfigChange(serverName, value)}
+                        placeholder="Enter MCP server configuration as JSON"
+                      />
+                    </div>
                     <div className="flex justify-between  bg-zinc-50">
                       <Button
                         variant="outline"
@@ -394,11 +400,17 @@ function CustomMCPPanel({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="">
-      <div className="bg-zinc-50 p-4 rounded-md space-y-3">
-        <textarea
-          value={customConfig}
-          onChange={(e) => setCustomConfig(e.target.value)}
-          placeholder={`{
+      <div className="space-y-3">
+        <div className="rounded-lg overflow-hidden border">
+          <CodeMirror
+            value={customConfig}
+            onChange={(value) => setCustomConfig(value)}
+            height="240px"
+            theme={vscodeLight}
+            extensions={[json()]}
+            placeholder={`example:
+
+{
   "postgres": {
     "command": "npx",
     "args": [
@@ -408,9 +420,8 @@ function CustomMCPPanel({ onClose }: { onClose?: () => void }) {
     ]
   }
 }`}
-          className="w-full h-[240px] p-3 rounded-md border border-input bg-background outline-none resize-none"
-          spellCheck={false}
-        />
+          />
+        </div>
 
         <div>
           <Button
