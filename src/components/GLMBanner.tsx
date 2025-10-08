@@ -95,7 +95,6 @@ export function GLMDialog(props: {
 
       setIsOpen(false)
       setApiKey("")
-      navigate(`/edit/${store.id}`)
 
       // Call onSuccess callback to dismiss the banner
       props.onSuccess?.()
