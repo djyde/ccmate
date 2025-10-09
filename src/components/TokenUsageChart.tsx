@@ -309,10 +309,11 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
     plugins: {
       legend: {
         position: "top" as const,
+        display: false,
       },
       title: {
-        display: true,
-        text: getChartTitle(),
+        // display: true,
+        // text: getChartTitle(),
       },
       tooltip: {
         mode: "index",
@@ -335,7 +336,7 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
       x: {
         display: true,
         title: {
-          display: true,
+          display: false,
           text: "Time",
         },
         grid: {
@@ -345,7 +346,7 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
       y: {
         display: true,
         title: {
-          display: true,
+          display: false,
           text: "Tokens",
         },
         beginAtZero: true,
