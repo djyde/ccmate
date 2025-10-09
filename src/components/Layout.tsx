@@ -21,9 +21,9 @@ export function Layout() {
       label: "MCP"
     },
     {
-      to: "/monitor",
+      to: "/usage",
       icon: ActivityIcon,
-      label: "Monitor"
+      label: "用量"
     },
     {
       to: "/settings",

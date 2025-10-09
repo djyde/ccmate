@@ -5,7 +5,7 @@ import { ConfigSwitcherPage } from "./pages/ConfigSwitcherPage";
 import { ConfigEditorPage } from "./pages/ConfigEditorPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { MCPPage } from "./pages/MCPPage";
-import { MonitorPage } from "./pages/MonitorPage";
+import { UsagePage } from "./pages/UsagePage";
 
 const router = createBrowserRouter([
   {
@@ -49,10 +49,10 @@ const router = createBrowserRouter([
         ),
       },
       {
-        path: "monitor",
+        path: "usage",
         element: (
           <RouteWrapper>
-            <MonitorPage />
+            <UsagePage />
           </RouteWrapper>
         ),
       },

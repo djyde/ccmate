@@ -4,6 +4,7 @@ import { ProjectUsageRecord } from "@/lib/query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo, useEffect } from "react";
 import { formatLargeNumber } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface TokenUsageChartProps {
   data: ProjectUsageRecord[];
@@ -13,6 +14,7 @@ interface TokenUsageChartProps {
 type TimeRange = "5h" | "today" | "7d" | "week" | "month" | "all";
 
 export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartProps) {
+  const { t } = useTranslation();
   const [selectedModel, setSelectedModel] = useState<string>("all");
   const [timeRange, setTimeRange] = useState<TimeRange>("5h");
   const [activeCategories, setActiveCategories] = useState<string[]>(["Input Tokens", "Output Tokens"]);
@@ -255,7 +257,7 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
   if (!data || data.length === 0) {
     return (
       <div className="h-96 flex items-center justify-center border rounded-lg bg-muted/20">
-        <p className="text-muted-foreground">No usage data available</p>
+        <p className="text-muted-foreground">{t("usageChart.noData")}</p>
       </div>
     );
   }
@@ -266,14 +268,14 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
       <div className="flex gap-4 items-center flex-wrap pb-5">
         <div className="flex items-center gap-2">
           <label htmlFor="model-filter" className="text-sm font-medium">
-            Model:
+            {t("usageChart.modelFilter")}
           </label>
           <Select value={selectedModel} onValueChange={setSelectedModel}>
             <SelectTrigger id="model-filter" className="w-48">
-              <SelectValue placeholder="All models" />
+              <SelectValue placeholder={t("usageChart.allModels")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All models</SelectItem>
+              <SelectItem value="all">{t("usageChart.allModels")}</SelectItem>
               {availableModels.map((model) => (
                 <SelectItem key={model} value={model}>
                   {model}
@@ -285,19 +287,19 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
 
         <div className="flex items-center gap-2">
           <label htmlFor="time-range" className="text-sm font-medium">
-            Time Range:
+            {t("usageChart.timeRange")}
           </label>
           <Select value={timeRange} onValueChange={(value: TimeRange) => setTimeRange(value)}>
             <SelectTrigger id="time-range" className="w-48">
-              <SelectValue placeholder="Select time range" />
+              <SelectValue placeholder={t("usageChart.selectTimeRange")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="5h">Last 5 hours</SelectItem>
-              <SelectItem value="today">Start of today</SelectItem>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="week">Start of this week</SelectItem>
-              <SelectItem value="month">Start of this month</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="5h">{t("usageChart.last5Hours")}</SelectItem>
+              <SelectItem value="today">{t("usageChart.startOfToday")}</SelectItem>
+              <SelectItem value="7d">{t("usageChart.last7Days")}</SelectItem>
+              <SelectItem value="week">{t("usageChart.startOfWeek")}</SelectItem>
+              <SelectItem value="month">{t("usageChart.startOfMonth")}</SelectItem>
+              <SelectItem value="all">{t("usageChart.allTime")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -305,15 +307,19 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
 
       {/* Custom Legend */}
       <div className="flex gap-6 items-center justify-center pb-4">
-        {["Input Tokens", "Output Tokens", "Cache Read Tokens"].map((category) => {
-          const isActive = activeCategories.includes(category);
-          const color = category === "Input Tokens" ? "bg-blue-500" :
-                       category === "Output Tokens" ? "bg-emerald-500" :
+        {[
+          { key: "Input Tokens", label: t("usage.inputTokens") },
+          { key: "Output Tokens", label: t("usage.outputTokens") },
+          { key: "Cache Read Tokens", label: t("usage.cacheReadTokens") }
+        ].map(({ key, label }) => {
+          const isActive = activeCategories.includes(key);
+          const color = key === "Input Tokens" ? "bg-blue-500" :
+                       key === "Output Tokens" ? "bg-emerald-500" :
                        "bg-amber-500";
           return (
             <button
-              key={category}
-              onClick={() => toggleCategory(category)}
+              key={key}
+              onClick={() => toggleCategory(key)}
               className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition-all ${
                 isActive
                   ? 'opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -321,7 +327,7 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
               }`}
             >
               <span className={`w-3 h-3 rounded-full ${color}`} />
-              <span className="text-gray-700 dark:text-gray-300">{category}</span>
+              <span className="text-gray-700 dark:text-gray-300">{label}</span>
             </button>
           );
         })}
