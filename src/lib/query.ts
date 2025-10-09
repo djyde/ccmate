@@ -314,6 +314,26 @@ export const useDeleteGlobalMcpServer = () => {
   });
 };
 
+export interface UsageData {
+  input_tokens?: number;
+  cache_read_input_tokens?: number;
+  output_tokens?: number;
+}
+
+export interface ProjectUsageRecord {
+  uuid: string;
+  timestamp: string;
+  model?: string;
+  usage?: UsageData;
+}
+
+export const useProjectUsageFiles = () => {
+  return useQuery({
+    queryKey: ["project-usage-files"],
+    queryFn: () => invoke<ProjectUsageRecord[]>("read_project_usage_files"),
+  });
+};
+
 // Helper function to rebuild tray menu
 const rebuildTrayMenu = async () => {
   try {

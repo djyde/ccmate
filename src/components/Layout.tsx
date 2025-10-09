@@ -2,7 +2,7 @@ import React from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn, isMacOS } from "../lib/utils";
-import { FileJsonIcon, SettingsIcon, CpuIcon } from "lucide-react";
+import { FileJsonIcon, SettingsIcon, CpuIcon, ActivityIcon } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { UpdateButton } from "./UpdateButton";
 
@@ -19,6 +19,11 @@ export function Layout() {
       to: "/mcp",
       icon: CpuIcon,
       label: "MCP"
+    },
+    {
+      to: "/monitor",
+      icon: ActivityIcon,
+      label: "Monitor"
     },
     {
       to: "/settings",

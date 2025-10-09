@@ -1,7 +1,6 @@
 // !!!IMPORTANT: Please DO NOT localize this file
 
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { Button } from "./ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, } from "./ui/dialog"
@@ -66,7 +65,6 @@ export function GLMDialog(props: {
 }) {
   const [apiKey, setApiKey] = useState("")
   const [isOpen, setIsOpen] = useState(false)
-  const navigate = useNavigate()
   const createConfigMutation = useCreateConfig()
   const setCurrentConfigMutation = useSetCurrentConfig()
 

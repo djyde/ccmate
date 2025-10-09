@@ -165,7 +165,8 @@ pub fn run() {
             check_for_updates,
             install_and_restart,
             rebuild_tray_menu_command,
-            unlock_cc_ext
+            unlock_cc_ext,
+            read_project_usage_files
         ])
         .on_window_event(|window, event| {
             #[cfg(target_os = "macos")]
