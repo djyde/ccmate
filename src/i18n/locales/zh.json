@@ -1,6 +1,8 @@
 {
   "app.title": "CC Mate",
   "navigation.configurations": "配置文件",
+  "navigation.mcp": "MCP",
+  "navigation.usage": "用量",
   "navigation.settings": "设置",
   "config.type.user": "用户配置",
   "config.type.enterprise": "企业配置",

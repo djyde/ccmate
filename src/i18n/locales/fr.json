@@ -1,6 +1,8 @@
 {
   "app.title": "CC Mate",
   "navigation.configurations": "Fichiers de configuration",
+  "navigation.mcp": "MCP",
+  "navigation.usage": "Utilisation",
   "navigation.settings": "Paramètres",
   "config.type.user": "Configuration utilisateur",
   "config.type.enterprise": "Configuration entreprise",
