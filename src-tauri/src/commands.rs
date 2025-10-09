@@ -914,7 +914,7 @@ pub async fn read_project_usage_files() -> Result<Vec<ProjectUsageRecord>, Strin
 
     for path in jsonl_files {
         files_processed += 1;
-        println!("📄 Processing file: {}", path.display());
+        // println!("📄 Processing file: {}", path.display());
 
         // Read the JSONL file
         let content = std::fs::read_to_string(&path)

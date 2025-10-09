@@ -2,12 +2,14 @@ import { useProjectUsageFiles } from "@/lib/query";
 import { TokenUsageChart } from "@/components/TokenUsageChart";
 import { useState, useEffect } from "react";
 import { ProjectUsageRecord } from "@/lib/query";
-import { formatLargeNumber } from "@/lib/utils";
+import { cn, formatLargeNumber } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
+import { RefreshCwIcon } from "lucide-react";
 
 export function UsagePage() {
   const { t } = useTranslation();
-  const { data: usageData, isLoading, error } = useProjectUsageFiles();
+  const { data: usageData, isLoading, error, refetch, isRefetching } = useProjectUsageFiles();
   const [filteredUsageData, setFilteredUsageData] = useState<ProjectUsageRecord[]>([]);
 
   // Initialize filtered data with full data
@@ -26,10 +28,35 @@ export function UsagePage() {
             {t("usage.description")}
           </p>
         </div>
+
+        <div>
+          <Button 
+          disabled={isRefetching || isLoading}
+          onClick={_ => {
+            refetch();
+          }} variant="ghost" size="sm" className="text-muted-foreground">
+            <RefreshCwIcon className={cn({
+              "animate-spin": isRefetching || isLoading,
+            })} />
+            {isRefetching || isLoading ? "正在刷新" : "刷新"}
+          </Button>
+        </div>
       </div>
-      <div className="px-4 space-y-6">
+      <div className="px-4 space-y-4">
         {isLoading ? (
-          <p>{t("usage.loading")}</p>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-zinc-50 p-4 rounded-lg space-y-2">
+                  <div className="h-4  rounded animate-pulse"></div>
+                  <div className="h-8 rounded animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 bg-zinc-50 p-6 rounded-lg w-full min-w-0">
+              <div className="h-64 rounded animate-pulse"></div>
+            </div>
+          </div>
         ) : error ? (
           <p>{t("usage.error", { error: error.message })}</p>
         ) : usageData && usageData.length > 0 ? (
@@ -67,7 +94,7 @@ export function UsagePage() {
               </div> */}
             </div>
 
-            <div className="mt-6 bg-zinc-50 p-6 rounded-lg w-full min-w-0">
+            <div className=" bg-zinc-50 p-6 rounded-lg w-full min-w-0">
               <TokenUsageChart data={usageData} onFilteredDataChange={setFilteredUsageData} />
             </div>
           </>
