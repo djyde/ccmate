@@ -10,7 +10,7 @@ import {
   ChartOptions,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { format, startOfDay, startOfWeek, startOfMonth, subHours, subDays, getYear, getMonth, getDaysInMonth } from "date-fns";
+import { format, startOfDay, startOfWeek, startOfMonth, subHours, subDays } from "date-fns";
 import { ProjectUsageRecord } from "@/lib/query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo, useEffect } from "react";
@@ -117,29 +117,32 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
     const now = new Date();
 
     if (timeRange === "all") {
-      // For all time, group by month
+      // For all time, group by week
       const earliestTime = records.length > 0
         ? new Date(Math.min(...records.map((record) => new Date(record.timestamp).getTime())))
         : new Date();
 
-      const startOfEarliestMonth = new Date(getYear(earliestTime), getMonth(earliestTime), 1);
-      const startOfCurrentMonth = new Date(getYear(now), getMonth(now), 1);
+      // Get start of the week for earliest time
+      let currentWeekStart = startOfWeek(earliestTime);
+      const nowWeekStart = startOfWeek(now);
 
-      // Generate monthly intervals from earliest month to current month
-      for (let monthTime = startOfEarliestMonth.getTime(); monthTime <= startOfCurrentMonth.getTime(); monthTime += getDaysInMonth(new Date(monthTime)) * 24 * 60 * 60 * 1000) {
-        intervals[monthTime] = { input: 0, output: 0, cache: 0 };
+      // Generate weekly intervals from earliest week to current week
+      while (currentWeekStart <= nowWeekStart) {
+        intervals[currentWeekStart.getTime()] = { input: 0, output: 0, cache: 0 };
+        // Move to next week (7 days)
+        currentWeekStart = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
       }
 
-      // Group records into monthly intervals
+      // Group records into weekly intervals
       records.forEach((record) => {
         const recordTime = new Date(record.timestamp);
-        const monthStart = new Date(getYear(recordTime), getMonth(recordTime), 1);
-        const monthKey = monthStart.getTime();
+        const weekStart = startOfWeek(recordTime);
+        const weekKey = weekStart.getTime();
 
-        if (intervals[monthKey]) {
-          intervals[monthKey].input += record.usage?.input_tokens || 0;
-          intervals[monthKey].output += record.usage?.output_tokens || 0;
-          intervals[monthKey].cache += record.usage?.cache_read_input_tokens || 0;
+        if (intervals[weekKey]) {
+          intervals[weekKey].input += record.usage?.input_tokens || 0;
+          intervals[weekKey].output += record.usage?.output_tokens || 0;
+          intervals[weekKey].cache += record.usage?.cache_read_input_tokens || 0;
         }
       });
     } else if (timeRange === "30min" || timeRange === "1h" || timeRange === "5h") {
@@ -216,20 +219,27 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
       });
     } else {
       // Group by day for longer periods (7d, 30d, week, month)
-      const days = timeRange === "7d" ? 7 : timeRange === "30d" ? 30 : timeRange === "week" ? 7 : 30;
       let startDate: Date;
+      let days: number;
 
       if (timeRange === "week") {
         startDate = startOfWeek(now);
+        // Calculate actual days in the current week so far (from start of week to today)
+        const todayStart = startOfDay(now);
+        days = Math.floor((todayStart.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) + 1;
       } else if (timeRange === "month") {
         startDate = startOfMonth(now);
+        // Calculate actual days in the current month so far (from start of month to today)
+        const todayStart = startOfDay(now);
+        days = Math.floor((todayStart.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) + 1;
       } else {
         // For 7d and 30d, start from (days-1) days ago to include today
-        startDate = subDays(now, days - 1);
+        days = timeRange === "7d" ? 7 : 30;
+        startDate = startOfDay(subDays(now, days - 1));
       }
 
       for (let i = 0; i < days; i++) {
-        const dayTime = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+        const dayTime = startOfDay(new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000));
         intervals[dayTime.getTime()] = { input: 0, output: 0, cache: 0 };
       }
 
@@ -259,7 +269,7 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
     .map((timestamp) => {
       const date = new Date(timestamp);
       if (timeRange === "all") {
-        return format(date, "MMM yyyy");
+        return format(date, "MMM dd, yyyy");
       } else if (timeRange === "today") {
         return format(date, "HH:mm");
       } else if (timeRange === "30min" || timeRange === "1h" || timeRange === "5h") {
@@ -328,7 +338,7 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
       case "month":
         return `Token Usage (This Month)${modelFilter}`;
       case "all":
-        return `Token Usage (All Time - Monthly)${modelFilter}`;
+        return `Token Usage (All Time - Weekly)${modelFilter}`;
       default:
         return `Token Usage${modelFilter}`;
     }
