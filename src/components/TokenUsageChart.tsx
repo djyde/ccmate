@@ -379,6 +379,9 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
           display: true,
           text: "Time",
         },
+        grid: {
+          display: false,
+        },
       },
       y: {
         display: true,
@@ -387,6 +390,9 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
           text: "Tokens",
         },
         beginAtZero: true,
+        border: {
+          display: false,
+        },
       },
     },
     interaction: {
