@@ -3,6 +3,8 @@
     "composite": true,
     "skipLibCheck": true,
     "module": "ESNext",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true
   },

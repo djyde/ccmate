@@ -2,6 +2,7 @@ import { useProjectUsageFiles } from "@/lib/query";
 import { TokenUsageChart } from "@/components/TokenUsageChart";
 import { useState, useEffect } from "react";
 import { ProjectUsageRecord } from "@/lib/query";
+import { formatLargeNumber } from "@/lib/utils";
 
 export function MonitorPage() {
   const { data: usageData, isLoading, error } = useProjectUsageFiles();
@@ -35,24 +36,24 @@ export function MonitorPage() {
               <div className="bg-zinc-50 p-4 rounded-lg space-y-2">
                 <h3 className="font-medium">Input Tokens</h3>
                 <p className="text-2xl font-bold">
-                  {new Intl.NumberFormat().format(filteredUsageData.reduce((sum, record) => sum + (record.usage?.input_tokens || 0), 0))}
+                  {formatLargeNumber(filteredUsageData.reduce((sum, record) => sum + (record.usage?.input_tokens || 0), 0))}
                 </p>
               </div>
               <div className="bg-zinc-50 p-4 rounded-lg space-y-2">
                 <h3 className="font-medium">Output Tokens</h3>
                 <p className="text-2xl font-bold">
-                  {new Intl.NumberFormat().format(filteredUsageData.reduce((sum, record) => sum + (record.usage?.output_tokens || 0), 0))}
+                  {formatLargeNumber(filteredUsageData.reduce((sum, record) => sum + (record.usage?.output_tokens || 0), 0))}
                 </p>
               </div>
               <div className="bg-zinc-50 p-4 rounded-lg space-y-2">
                 <h3 className="font-medium">Cache Read Tokens</h3>
                 <p className="text-2xl font-bold">
-                  {new Intl.NumberFormat().format(filteredUsageData.reduce((sum, record) => sum + (record.usage?.cache_read_input_tokens || 0), 0))}
+                  {formatLargeNumber(filteredUsageData.reduce((sum, record) => sum + (record.usage?.cache_read_input_tokens || 0), 0))}
                 </p>
               </div>
             </div>
 
-            <div className="mt-6 bg-zinc-50 p-6 rounded-lg">
+            <div className="mt-6 bg-zinc-50 p-6 rounded-lg w-full min-w-0">
               <TokenUsageChart data={usageData} onFilteredDataChange={setFilteredUsageData} />
             </div>
           </>

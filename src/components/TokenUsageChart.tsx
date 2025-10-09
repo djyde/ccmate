@@ -1,29 +1,9 @@
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  ChartOptions,
-} from "chart.js";
-import { Line } from "react-chartjs-2";
+import { AreaChart } from "@/components/ui/area-chart";
 import { format, startOfDay, startOfWeek, startOfMonth, subHours, subDays } from "date-fns";
 import { ProjectUsageRecord } from "@/lib/query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo, useEffect } from "react";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import { formatLargeNumber } from "@/lib/utils";
 
 interface TokenUsageChartProps {
   data: ProjectUsageRecord[];
@@ -35,6 +15,7 @@ type TimeRange = "5h" | "today" | "7d" | "week" | "month" | "all";
 export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartProps) {
   const [selectedModel, setSelectedModel] = useState<string>("all");
   const [timeRange, setTimeRange] = useState<TimeRange>("5h");
+  const [activeCategories, setActiveCategories] = useState<string[]>(["Input Tokens", "Output Tokens"]);
 
   // Get unique models from data
   const availableModels = useMemo(() => {
@@ -102,6 +83,24 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
       onFilteredDataChange(filteredData);
     }
   }, [filteredData, onFilteredDataChange]);
+
+  // Handle category toggling
+  const handleCategoryToggle = (value: any) => {
+    if (value && value.categoryClicked) {
+      setActiveCategories(prev => {
+        if (prev.includes(value.categoryClicked)) {
+          return prev.filter(cat => cat !== value.categoryClicked);
+        } else {
+          return [...prev, value.categoryClicked];
+        }
+      });
+    }
+  };
+
+  // Toggle category function for direct use
+  const toggleCategory = (category: string) => {
+    handleCategoryToggle({ categoryClicked: category });
+  };
   // Group data based on time range
   const groupDataByInterval = (records: ProjectUsageRecord[]) => {
     const intervals: { [key: string]: { input: number; output: number; cache: number } } = {};
@@ -227,140 +226,31 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
 
   const groupedData = groupDataByInterval(filteredData);
 
-  // Prepare chart data
-  const labels = Object.keys(groupedData)
+  // Prepare chart data for Recharts
+  const chartData = Object.keys(groupedData)
     .map(Number)
     .sort((a, b) => a - b)
     .map((timestamp) => {
       const date = new Date(timestamp);
+      let label: string;
       if (timeRange === "all") {
-        return format(date, "MMM dd, yyyy");
+        label = format(date, "MMM dd, yyyy");
       } else if (timeRange === "today") {
-        return format(date, "HH:mm");
+        label = format(date, "HH:mm");
       } else if (timeRange === "5h") {
-        return format(date, "HH:mm");
+        label = format(date, "HH:mm");
       } else {
-        return format(date, "MMM dd");
+        label = format(date, "MMM dd");
       }
+
+      return {
+        time: label,
+        timestamp,
+        "Input Tokens": groupedData[timestamp].input,
+        "Output Tokens": groupedData[timestamp].output,
+        "Cache Read Tokens": groupedData[timestamp].cache,
+      };
     });
-
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        label: "Input Tokens",
-        data: Object.keys(groupedData)
-          .map(Number)
-          .sort((a, b) => a - b)
-          .map((key) => groupedData[key].input),
-        borderColor: "rgb(59, 130, 246)",
-        backgroundColor: "rgba(59, 130, 246, 0.1)",
-        tension: 0.4,
-      },
-      {
-        label: "Output Tokens",
-        data: Object.keys(groupedData)
-          .map(Number)
-          .sort((a, b) => a - b)
-          .map((key) => groupedData[key].output),
-        borderColor: "rgb(16, 185, 129)",
-        backgroundColor: "rgba(16, 185, 129, 0.1)",
-        tension: 0.4,
-      },
-      {
-        label: "Cache Read Tokens",
-        data: Object.keys(groupedData)
-          .map(Number)
-          .sort((a, b) => a - b)
-          .map((key) => groupedData[key].cache),
-        borderColor: "rgb(245, 158, 11)",
-        backgroundColor: "rgba(245, 158, 11, 0.1)",
-        tension: 0.4,
-        hidden: true,
-      },
-    ],
-  };
-
-  // Get chart title based on time range
-  const getChartTitle = () => {
-    const modelFilter = selectedModel !== "all" ? ` - Model: ${selectedModel}` : "";
-
-    switch (timeRange) {
-      case "5h":
-        return `Token Usage (Last 5 Hours)${modelFilter}`;
-      case "today":
-        return `Token Usage (Today)${modelFilter}`;
-      case "7d":
-        return `Token Usage (Last 7 Days)${modelFilter}`;
-      case "week":
-        return `Token Usage (This Week)${modelFilter}`;
-      case "month":
-        return `Token Usage (This Month)${modelFilter}`;
-      case "all":
-        return `Token Usage (All Time - Weekly)${modelFilter}`;
-      default:
-        return `Token Usage${modelFilter}`;
-    }
-  };
-
-  const options: ChartOptions<"line"> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "top" as const,
-        display: false,
-      },
-      title: {
-        // display: true,
-        // text: getChartTitle(),
-      },
-      tooltip: {
-        mode: "index",
-        intersect: false,
-        callbacks: {
-          label: (context) => {
-            let label = context.dataset.label || "";
-            if (label) {
-              label += ": ";
-            }
-            if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat().format(context.parsed.y);
-            }
-            return label;
-          },
-        },
-      },
-    },
-    scales: {
-      x: {
-        display: true,
-        title: {
-          display: false,
-          text: "Time",
-        },
-        grid: {
-          display: false,
-        },
-      },
-      y: {
-        display: true,
-        title: {
-          display: false,
-          text: "Tokens",
-        },
-        beginAtZero: true,
-        border: {
-          display: false,
-        },
-      },
-    },
-    interaction: {
-      mode: "nearest",
-      axis: "x",
-      intersect: false,
-    },
-  };
 
   if (!data || data.length === 0) {
     return (
@@ -371,9 +261,9 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full min-w-0">
       {/* Filter Controls */}
-      <div className="flex gap-4 items-center flex-wrap">
+      <div className="flex gap-4 items-center flex-wrap pb-5">
         <div className="flex items-center gap-2">
           <label htmlFor="model-filter" className="text-sm font-medium">
             Model:
@@ -413,9 +303,47 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
         </div>
       </div>
 
+      {/* Custom Legend */}
+      <div className="flex gap-6 items-center justify-center pb-4">
+        {["Input Tokens", "Output Tokens", "Cache Read Tokens"].map((category) => {
+          const isActive = activeCategories.includes(category);
+          const color = category === "Input Tokens" ? "bg-blue-500" :
+                       category === "Output Tokens" ? "bg-emerald-500" :
+                       "bg-amber-500";
+          return (
+            <button
+              key={category}
+              onClick={() => toggleCategory(category)}
+              className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition-all ${
+                isActive
+                  ? 'opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  : 'opacity-40 hover:opacity-60'
+              }`}
+            >
+              <span className={`w-3 h-3 rounded-full ${color}`} />
+              <span className="text-gray-700 dark:text-gray-300">{category}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Chart */}
-      <div className="h-96 w-full">
-        <Line data={chartData} options={options} />
+      <div className="h-[320px] w-full min-w-0">
+        <AreaChart
+          data={chartData}
+          index="time"
+          categories={activeCategories}
+          colors={activeCategories.map(cat => {
+            if (cat === "Input Tokens") return "blue";
+            if (cat === "Output Tokens") return "emerald";
+            if (cat === "Cache Read Tokens") return "amber";
+            return "blue";
+          })}
+          valueFormatter={formatLargeNumber}
+          fill="gradient"
+          className="h-full"
+          showLegend={false}
+        />
       </div>
     </div>
   );
