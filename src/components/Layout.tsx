@@ -18,12 +18,12 @@ export function Layout() {
     {
       to: "/mcp",
       icon: CpuIcon,
-      label: "MCP"
+      label: t("navigation.mcp")
     },
     {
       to: "/usage",
       icon: ActivityIcon,
-      label: "用量"
+      label: t("navigation.usage")
     },
     {
       to: "/settings",
