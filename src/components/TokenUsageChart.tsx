@@ -30,7 +30,7 @@ interface TokenUsageChartProps {
   onFilteredDataChange?: (filteredData: ProjectUsageRecord[]) => void;
 }
 
-type TimeRange = "5h" | "1h" | "30min" | "today" | "7d" | "30d" | "month" | "week" | "all";
+type TimeRange = "5h" | "today" | "7d" | "week" | "month" | "all";
 
 export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartProps) {
   const [selectedModel, setSelectedModel] = useState<string>("all");
@@ -61,12 +61,6 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
     let startTime: Date;
 
     switch (timeRange) {
-      case "30min":
-        startTime = subHours(now, 0.5);
-        break;
-      case "1h":
-        startTime = subHours(now, 1);
-        break;
       case "5h":
         startTime = subHours(now, 5);
         break;
@@ -75,9 +69,6 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
         break;
       case "7d":
         startTime = subDays(now, 6);
-        break;
-      case "30d":
-        startTime = subDays(now, 29);
         break;
       case "week":
         startTime = startOfWeek(now);
@@ -145,56 +136,30 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
           intervals[weekKey].cache += record.usage?.cache_read_input_tokens || 0;
         }
       });
-    } else if (timeRange === "30min" || timeRange === "1h" || timeRange === "5h") {
-      if (timeRange === "30min" || timeRange === "1h") {
-        // Group by 5-minute intervals for 30 minutes and 1 hour
-        const minutes = timeRange === "30min" ? 30 : 60;
-        const currentInterval = Math.floor(now.getMinutes() / 5) * 5;
-        now.setMinutes(currentInterval, 0, 0);
+    } else if (timeRange === "5h") {
+      // Group by 30-minute intervals for 5h time range
+      const intervalMs = 30 * 60 * 1000; // 30 minutes in milliseconds
 
-        // Generate intervals
-        const intervalCount = Math.ceil(minutes / 5);
-        for (let i = intervalCount - 1; i >= 0; i--) {
-          const intervalTime = new Date(now.getTime() - i * 5 * 60 * 1000);
-          const intervalKey = intervalTime.getTime();
-          intervals[intervalKey] = { input: 0, output: 0, cache: 0 };
-        }
+      // Round current time down to nearest 30-minute boundary (epoch-based)
+      const currentIntervalKey = Math.floor(now.getTime() / intervalMs) * intervalMs;
 
-        // Group records into 5-minute intervals
-        records.forEach((record) => {
-          const recordTime = new Date(record.timestamp);
-          const recordIntervalKey = Math.floor(recordTime.getTime() / (5 * 60 * 1000)) * (5 * 60 * 1000);
-
-          if (intervals[recordIntervalKey]) {
-            intervals[recordIntervalKey].input += record.usage?.input_tokens || 0;
-            intervals[recordIntervalKey].output += record.usage?.output_tokens || 0;
-            intervals[recordIntervalKey].cache += record.usage?.cache_read_input_tokens || 0;
-          }
-        });
-      } else {
-        // Group by 30-minute intervals for 5h time range
-        const currentInterval = Math.floor(now.getMinutes() / 30) * 30;
-        now.setMinutes(currentInterval, 0, 0);
-
-        // Generate intervals (10 intervals for 5 hours)
-        for (let i = 9; i >= 0; i--) {
-          const intervalTime = new Date(now.getTime() - i * 30 * 60 * 1000);
-          const intervalKey = intervalTime.getTime();
-          intervals[intervalKey] = { input: 0, output: 0, cache: 0 };
-        }
-
-        // Group records into 30-minute intervals
-        records.forEach((record) => {
-          const recordTime = new Date(record.timestamp);
-          const recordIntervalKey = Math.floor(recordTime.getTime() / (30 * 60 * 1000)) * (30 * 60 * 1000);
-
-          if (intervals[recordIntervalKey]) {
-            intervals[recordIntervalKey].input += record.usage?.input_tokens || 0;
-            intervals[recordIntervalKey].output += record.usage?.output_tokens || 0;
-            intervals[recordIntervalKey].cache += record.usage?.cache_read_input_tokens || 0;
-          }
-        });
+      // Generate intervals (10 intervals for 5 hours)
+      for (let i = 0; i < 10; i++) {
+        const intervalKey = currentIntervalKey - i * intervalMs;
+        intervals[intervalKey] = { input: 0, output: 0, cache: 0 };
       }
+
+      // Group records into 30-minute intervals
+      records.forEach((record) => {
+        const recordTime = new Date(record.timestamp);
+        const recordIntervalKey = Math.floor(recordTime.getTime() / intervalMs) * intervalMs;
+
+        if (intervals[recordIntervalKey]) {
+          intervals[recordIntervalKey].input += record.usage?.input_tokens || 0;
+          intervals[recordIntervalKey].output += record.usage?.output_tokens || 0;
+          intervals[recordIntervalKey].cache += record.usage?.cache_read_input_tokens || 0;
+        }
+      });
     } else if (timeRange === "today") {
       // Group by hour for today
       const startOfToday = startOfDay(now);
@@ -218,7 +183,7 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
         }
       });
     } else {
-      // Group by day for longer periods (7d, 30d, week, month)
+      // Group by day for longer periods (7d, week, month)
       let startDate: Date;
       let days: number;
 
@@ -233,8 +198,8 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
         const todayStart = startOfDay(now);
         days = Math.floor((todayStart.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) + 1;
       } else {
-        // For 7d and 30d, start from (days-1) days ago to include today
-        days = timeRange === "7d" ? 7 : 30;
+        // For 7d, start from (days-1) days ago to include today
+        days = 7;
         startDate = startOfDay(subDays(now, days - 1));
       }
 
@@ -272,7 +237,7 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
         return format(date, "MMM dd, yyyy");
       } else if (timeRange === "today") {
         return format(date, "HH:mm");
-      } else if (timeRange === "30min" || timeRange === "1h" || timeRange === "5h") {
+      } else if (timeRange === "5h") {
         return format(date, "HH:mm");
       } else {
         return format(date, "MMM dd");
@@ -321,18 +286,12 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
     const modelFilter = selectedModel !== "all" ? ` - Model: ${selectedModel}` : "";
 
     switch (timeRange) {
-      case "30min":
-        return `Token Usage (Last 30 Minutes - 5 min intervals)${modelFilter}`;
-      case "1h":
-        return `Token Usage (Last Hour - 5 min intervals)${modelFilter}`;
       case "5h":
         return `Token Usage (Last 5 Hours)${modelFilter}`;
       case "today":
         return `Token Usage (Today)${modelFilter}`;
       case "7d":
         return `Token Usage (Last 7 Days)${modelFilter}`;
-      case "30d":
-        return `Token Usage (Last 30 Days)${modelFilter}`;
       case "week":
         return `Token Usage (This Week)${modelFilter}`;
       case "month":
@@ -442,12 +401,9 @@ export function TokenUsageChart({ data, onFilteredDataChange }: TokenUsageChartP
               <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="30min">Last 30 minutes</SelectItem>
-              <SelectItem value="1h">Last 1 hour</SelectItem>
               <SelectItem value="5h">Last 5 hours</SelectItem>
               <SelectItem value="today">Start of today</SelectItem>
               <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
               <SelectItem value="week">Start of this week</SelectItem>
               <SelectItem value="month">Start of this month</SelectItem>
               <SelectItem value="all">All time</SelectItem>
