@@ -51,6 +51,18 @@ export function MonitorPage() {
                   {formatLargeNumber(filteredUsageData.reduce((sum, record) => sum + (record.usage?.cache_read_input_tokens || 0), 0))}
                 </p>
               </div>
+
+              {/* <div className="bg-zinc-50 p-4 rounded-lg space-y-2">
+                <div className="flex items-start justify-between">
+                  <h3 className="font-medium">Cost</h3>
+                  <Button variant="ghost" size="icon" className="-my-2 -mr-2">
+                    <SettingsIcon />
+                  </Button>
+                </div>
+                <p className="text-2xl font-bold">
+                  $0.00
+                </p>
+              </div> */}
             </div>
 
             <div className="mt-6 bg-zinc-50 p-6 rounded-lg w-full min-w-0">
