@@ -8,6 +8,7 @@ import { MCPPage } from "./pages/MCPPage";
 import { UsagePage } from "./pages/UsagePage";
 import { MemoryPage } from "./pages/MemoryPage";
 import { List } from "./pages/projects/List";
+import { Detail } from "./pages/projects/Detail";
 
 const router = createBrowserRouter([
   {
@@ -71,6 +72,14 @@ const router = createBrowserRouter([
         element: (
           <RouteWrapper>
             <List />
+          </RouteWrapper>
+        ),
+      },
+      {
+        path: "projects/:path",
+        element: (
+          <RouteWrapper>
+            <Detail />
           </RouteWrapper>
         ),
       },

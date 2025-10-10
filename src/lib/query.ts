@@ -365,6 +365,20 @@ export const useWriteClaudeMemory = () => {
   });
 };
 
+// Projects management hooks
+
+export interface ProjectConfig {
+  path: string;
+  config: Record<string, any>;
+}
+
+export const useClaudeProjects = () => {
+  return useQuery({
+    queryKey: ["claude-projects"],
+    queryFn: () => invoke<ProjectConfig[]>("read_claude_projects"),
+  });
+};
+
 // Helper function to rebuild tray menu
 const rebuildTrayMenu = async () => {
   try {

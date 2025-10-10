@@ -1246,6 +1246,44 @@ fn get_os_version() -> Result<String, String> {
     Ok("Unknown".to_string())
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct ProjectConfig {
+    pub path: String,
+    pub config: serde_json::Value,
+}
+
+#[tauri::command]
+pub async fn read_claude_projects() -> Result<Vec<ProjectConfig>, String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let claude_json_path = home_dir.join(".claude.json");
+
+    if !claude_json_path.exists() {
+        return Ok(vec![]);
+    }
+
+    let content = std::fs::read_to_string(&claude_json_path)
+        .map_err(|e| format!("Failed to read .claude.json: {}", e))?;
+
+    let json_value: Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse .claude.json: {}", e))?;
+
+    let projects_obj = json_value.get("projects")
+        .and_then(|projects| projects.as_object())
+        .cloned()
+        .unwrap_or_else(serde_json::Map::new);
+
+    let mut result = Vec::new();
+    for (path, config) in projects_obj {
+        let project_config = ProjectConfig {
+            path: path.clone(),
+            config: config.clone(),
+        };
+        result.push(project_config);
+    }
+
+    Ok(result)
+}
+
 #[tauri::command]
 pub async fn track(event: String, properties: serde_json::Value, app: tauri::AppHandle) -> Result<(), String> {
     println!("📊 Tracking event: {}", event);
