@@ -7,6 +7,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { MCPPage } from "./pages/MCPPage";
 import { UsagePage } from "./pages/UsagePage";
 import { MemoryPage } from "./pages/MemoryPage";
+import { CommandsPage } from "./pages/CommandsPage";
 import { List } from "./pages/projects/List";
 import { Detail } from "./pages/projects/Detail";
 import { ProjectsLayout } from "./pages/projects/Layout";
@@ -74,6 +75,14 @@ const router = createBrowserRouter([
         element: (
           <RouteWrapper>
             <NotificationPage />
+          </RouteWrapper>
+        ),
+      },
+      {
+        path: "commands",
+        element: (
+          <RouteWrapper>
+            <CommandsPage />
           </RouteWrapper>
         ),
       },

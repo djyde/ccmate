@@ -2,7 +2,7 @@ import React from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn, isMacOS } from "../lib/utils";
-import { FileJsonIcon, SettingsIcon, CpuIcon, ActivityIcon, BrainIcon, FolderIcon, BellIcon } from "lucide-react";
+import { FileJsonIcon, SettingsIcon, CpuIcon, ActivityIcon, BrainIcon, FolderIcon, BellIcon, TerminalIcon } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 
 export function Layout() {
@@ -45,6 +45,11 @@ export function Layout() {
       to: "/settings",
       icon: SettingsIcon,
       label: t("navigation.settings")
+    },
+    {
+      to: "/commands",
+      icon: TerminalIcon,
+      label: t("navigation.commands")
     }
   ]
 

@@ -43,6 +43,12 @@ export interface NotificationSettings {
   enabled_hooks: string[];
 }
 
+export interface CommandFile {
+  name: string;
+  content: string;
+  exists: boolean;
+}
+
 export const useConfigFiles = () => {
   return useQuery({
     queryKey: ["config-files"],
@@ -452,6 +458,47 @@ export const useSendTestNotification = () => {
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`Failed to send test notification: ${errorMessage}`);
+    },
+  });
+};
+
+// Command management hooks
+export const useClaudeCommands = () =>
+  useQuery({
+    queryKey: ["claude-commands"],
+    queryFn: () => invoke<CommandFile[]>("read_claude_commands"),
+  });
+
+export const useWriteClaudeCommand = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ commandName, content }: { commandName: string; content: string }) =>
+      invoke<void>("write_claude_command", { commandName, content }),
+    onSuccess: () => {
+      toast.success(i18n.t("toast.commandSaved"));
+      queryClient.invalidateQueries({ queryKey: ["claude-commands"] });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(i18n.t("toast.commandSaveFailed", { error: errorMessage }));
+    },
+  });
+};
+
+export const useDeleteClaudeCommand = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (commandName: string) =>
+      invoke<void>("delete_claude_command", { commandName }),
+    onSuccess: () => {
+      toast.success(i18n.t("toast.commandDeleted"));
+      queryClient.invalidateQueries({ queryKey: ["claude-commands"] });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(i18n.t("toast.commandDeleteFailed", { error: errorMessage }));
     },
   });
 };
