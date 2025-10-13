@@ -32,6 +32,11 @@ export function Layout() {
       label: t("navigation.memory")
     },
     {
+      to: "/commands",
+      icon: TerminalIcon,
+      label: t("navigation.commands")
+    },
+    {
       to: "/notification",
       icon: BellIcon,
       label: t("navigation.notifications")
@@ -46,11 +51,7 @@ export function Layout() {
       icon: SettingsIcon,
       label: t("navigation.settings")
     },
-    {
-      to: "/commands",
-      icon: TerminalIcon,
-      label: t("navigation.commands")
-    }
+
   ]
 
   return (

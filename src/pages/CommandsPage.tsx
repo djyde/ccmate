@@ -6,11 +6,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { TerminalIcon, ExternalLinkIcon, PlusIcon, SaveIcon, TrashIcon, EditIcon } from "lucide-react";
-import { useClaudeCommands, useWriteClaudeCommand, useDeleteClaudeCommand, type CommandFile } from "@/lib/query";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { TerminalIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
+import { useClaudeCommands, useWriteClaudeCommand, useDeleteClaudeCommand } from "@/lib/query";
 import { ask, message } from "@tauri-apps/plugin-dialog";
+import CodeMirror, { EditorView } from "@uiw/react-codemirror";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { useCodeMirrorTheme } from "@/lib/use-codemirror-theme";
 
 function CommandsPageContent() {
   const { t } = useTranslation();
@@ -19,6 +20,7 @@ function CommandsPageContent() {
   const deleteCommand = useDeleteClaudeCommand();
   const [commandEdits, setCommandEdits] = useState<Record<string, string>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const codeMirrorTheme = useCodeMirrorTheme();
 
   if (isLoading) {
     return (
@@ -84,7 +86,7 @@ function CommandsPageContent() {
           </DialogTrigger>
           <DialogContent className="max-w-[600px]">
             <DialogHeader>
-              <DialogTitle className="text-primary text-sm">{t('commands.addCommandTitle')}</DialogTitle>
+              <DialogTitle className="">{t('commands.addCommandTitle')}</DialogTitle>
               <DialogDescription className="text-muted-foreground text-sm">
                 {t('commands.addCommandDescription')}
               </DialogDescription>
@@ -99,25 +101,49 @@ function CommandsPageContent() {
             {t('commands.noCommands')}
           </div>
         ) : (
-          <ScrollArea className="h-[calc(100vh-8rem)]">
-            <div className="p-4">
-              <Accordion type="multiple" className="space-y-2">
+          <ScrollArea className="h-full">
+            <div className="">
+              <Accordion type="multiple" className="">
                 {commands.map((command) => (
                   <AccordionItem key={command.name} value={command.name} className="bg-card">
                     <AccordionTrigger className="hover:no-underline px-4 py-2 bg-card hover:bg-accent duration-150">
                       <div className="flex items-center gap-2">
                         <TerminalIcon size={12} />
                         <span className="font-medium">{command.name}</span>
+                        <span className="text-sm text-muted-foreground font-normal">
+                          {`~/.claude/commands/${command.name}.md`}
+                        </span>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="pb-3">
                       <div className="px-3 pt-3 space-y-3">
                         <div className="rounded-lg overflow-hidden border">
-                          <Textarea
+                          <CodeMirror
                             value={commandEdits[command.name] !== undefined ? commandEdits[command.name] : command.content}
-                            onChange={(e) => handleContentChange(command.name, e.target.value)}
-                            className="min-h-[180px] font-mono text-sm border-0 focus-visible:ring-0"
+                            height="180px"
+                            theme={codeMirrorTheme}
+                            onChange={(value) => handleContentChange(command.name, value)}
                             placeholder={t('commands.contentPlaceholder')}
+                            extensions={[
+                              markdown({
+                                base: markdownLanguage,
+                              }),
+                              EditorView.lineWrapping
+                            ]}
+                            basicSetup={{
+                              lineNumbers: false,
+                              highlightActiveLineGutter: true,
+                              foldGutter: false,
+                              dropCursor: false,
+                              allowMultipleSelections: false,
+                              indentOnInput: true,
+                              bracketMatching: true,
+                              closeBrackets: true,
+                              autocompletion: true,
+                              highlightActiveLine: true,
+                              highlightSelectionMatches: true,
+                              searchKeymap: false,
+                            }}
                           />
                         </div>
                         <div className="flex justify-between bg-card">
@@ -173,6 +199,7 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
   const [commandContent, setCommandContent] = useState("");
   const writeCommand = useWriteClaudeCommand();
   const { data: commands } = useClaudeCommands();
+  const codeMirrorTheme = useCodeMirrorTheme();
 
   const handleCreateCommand = async () => {
     // Validate command name
@@ -216,7 +243,7 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="space-y-4 py-3">
+    <div className="space-y-4 mt-4">
       <div className="space-y-2">
         <Label htmlFor="command-name">{t('commands.commandName')}</Label>
         <Input
@@ -229,20 +256,41 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
 
       <div className="space-y-2">
         <Label htmlFor="command-content">{t('commands.commandContent')}</Label>
-        <Textarea
-          id="command-content"
-          value={commandContent}
-          onChange={(e) => setCommandContent(e.target.value)}
-          className="min-h-[200px] font-mono text-sm"
-          placeholder={t('commands.contentPlaceholder')}
-        />
+        <div className="rounded-lg overflow-hidden border">
+          <CodeMirror
+            value={commandContent}
+            onChange={(value) => setCommandContent(value)}
+            height="200px"
+            theme={codeMirrorTheme}
+            placeholder={t('commands.contentPlaceholder')}
+            extensions={[
+              markdown({
+                base: markdownLanguage,
+              }),
+              EditorView.lineWrapping
+            ]}
+            basicSetup={{
+              lineNumbers: false,
+              highlightActiveLineGutter: true,
+              foldGutter: false,
+              dropCursor: false,
+              allowMultipleSelections: false,
+              indentOnInput: true,
+              bracketMatching: true,
+              closeBrackets: true,
+              autocompletion: true,
+              highlightActiveLine: true,
+              highlightSelectionMatches: true,
+              searchKeymap: false,
+            }}
+          />
+        </div>
       </div>
 
       <div className="flex justify-end">
         <Button
           onClick={handleCreateCommand}
           disabled={!commandName.trim() || !commandContent.trim() || writeCommand.isPending}
-          size="sm"
         >
           {writeCommand.isPending ? t('commands.creating') : t('commands.create')}
         </Button>
