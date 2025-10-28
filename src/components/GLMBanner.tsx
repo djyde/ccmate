@@ -1,5 +1,3 @@
-// !!!IMPORTANT: Please DO NOT localize this file
-
 import { useState } from "react"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { Button } from "./ui/button"
@@ -7,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 import { CircleQuestionMarkIcon, ExternalLinkIcon } from "lucide-react"
 import { Input } from "./ui/input"
+import { NativeSelect, NativeSelectOption } from "./ui/native-select"
 import { useCreateConfig, useSetCurrentConfig } from "@/lib/query"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "react-i18next"
@@ -15,7 +14,7 @@ export function GLMBanner(props: {
   className?: string,
   hideCloseButton?: boolean
 }) {
-  const { i18n } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [isDismissed, setIsDismissed] = useState(localStorage.getItem('glm-banner-dismissed') === 'true')
 
   const handleDismiss = () => {
@@ -30,14 +29,14 @@ export function GLMBanner(props: {
 
   return (
     <div className={cn("bg-card rounded-md p-2 border space-y-2", props.className)}>
-      <h3 className="text-card-foreground text-sm font-medium flex items-center gap-2">在 Claude Code 中使用 GLM 4.6
+      <h3 className="text-card-foreground text-sm font-medium flex items-center gap-2">{t('glm.title')}
         <TooltipProvider>
           <Tooltip delayDuration={100}>
             <TooltipTrigger>
               <CircleQuestionMarkIcon size={14} className="text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent className="w-[200px]">
-              <p className="font-normal">「在公开基准与真实编程任务中，GLM-4.6 的代码能力对齐 Claude Sonnet 4，是国内已知的最好的 Coding 模型」 —— 智谱官方文档</p>
+              <p className="font-normal">{t('glm.tooltip')}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -46,13 +45,13 @@ export function GLMBanner(props: {
         <GLMDialog
           trigger={
             <Button size="sm" variant="outline" className="text-sm">
-              开始配置
+              {t('glm.startConfig')}
             </Button>
           }
           onSuccess={handleDismiss}
         />
         {!props.hideCloseButton && <Button size="sm" variant="ghost" className="text-sm" onClick={handleDismiss}>
-          关闭
+          {t('glm.close')}
         </Button>}
       </div>
     </div>
@@ -63,7 +62,9 @@ export function GLMDialog(props: {
   trigger: React.ReactNode
   onSuccess?: () => void
 }) {
+  const { t } = useTranslation()
   const [apiKey, setApiKey] = useState("")
+  const [selectedRegion, setSelectedRegion] = useState("china-mainland")
   const [isOpen, setIsOpen] = useState(false)
   const createConfigMutation = useCreateConfig()
   const setCurrentConfigMutation = useSetCurrentConfig()
@@ -74,12 +75,16 @@ export function GLMDialog(props: {
     }
 
     try {
+      const baseUrl = selectedRegion === "z-ai"
+        ? 'https://api.z.ai/api/anthropic'
+        : 'https://open.bigmodel.cn/api/anthropic'
+
       const store = await createConfigMutation.mutateAsync({
-        title: "智谱 GLM",
+        title: selectedRegion === "z-ai" ? t('glm.zaiTitle') : t('glm.zhipuTitle'),
         settings: {
           env: {
             ANTHROPIC_AUTH_TOKEN: apiKey.trim(),
-            ANTHROPIC_BASE_URL: 'https://open.bigmodel.cn/api/anthropic',
+            ANTHROPIC_BASE_URL: baseUrl,
             ANTHROPIC_MODEL: 'GLM-4.6',
             ANTHROPIC_DEFAULT_OPUS_MODEL: 'GLM-4.6',
             ANTHROPIC_DEFAULT_SONNET_MODEL: 'GLM-4.6',
@@ -93,6 +98,7 @@ export function GLMDialog(props: {
 
       setIsOpen(false)
       setApiKey("")
+      setSelectedRegion("china-mainland")
 
       // Call onSuccess callback to dismiss the banner
       props.onSuccess?.()
@@ -109,53 +115,69 @@ export function GLMDialog(props: {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            配置智谱 GLM
+            {selectedRegion === "z-ai" ? t('glm.configZai') : t('glm.configZhipu')}
           </DialogTitle>
           <DialogDescription>
-            在 Claude Code 中使用智谱 GLM
+            {t('glm.description', { provider: selectedRegion === "z-ai" ? "Z.ai" : t('glm.zhipu') })}
           </DialogDescription>
         </DialogHeader>
         <div className="mt-4">
           <div className="space-y-3">
             <div>
+            <div className="my-4 flex  items-center gap-3">
+                  <NativeSelect
+                    value={selectedRegion}
+                    onChange={(e) => setSelectedRegion(e.target.value)}
+                    className="w-full mt-1"
+                  >
+                    <NativeSelectOption value="china-mainland">{t('glm.chinaMainland')}</NativeSelectOption>
+                    <NativeSelectOption value="z-ai">{t('glm.international')}</NativeSelectOption>
+                  </NativeSelect>
+                </div>
               <h2 className="text-card-foreground text-sm font-medium flex items-center gap-2">
-                第 1 步：购买 GLM 编码畅玩套餐
+                {t('glm.step1')}
               </h2>
               <div className="space-y-2 bg-secondary p-3 rounded-lg m-2">
+
                 <Button onClick={_ => {
-                  openUrl("https://www.bigmodel.cn/claude-code?ic=UP1VEQEATH")
+                  const url = selectedRegion === "z-ai"
+                    ? "https://z.ai/subscribe?ic=EBGYZCJRYJ"
+                    : "https://www.bigmodel.cn/claude-code?ic=UP1VEQEATH"
+                  openUrl(url)
                 }} size="sm" variant="outline" className="text-sm">
                   <ExternalLinkIcon />
-                  前往官网购买
+                  {t('glm.buyFromOfficial')}
                 </Button>
-                <p className="text-muted-foreground text-sm flex items-center gap-1">
-                  使用此按钮购买时，下单立减10%金额（官方活动）</p>
+                <p className="text-muted-foreground text-sm flex items-center gap-1">{t('glm.discount')}</p>
               </div>
             </div>
 
             <div>
               <h2 className="text-card-foreground text-sm font-medium flex items-center gap-2">
-                第 2 步：创建 API Key
+                {t('glm.step2')}
               </h2>
               <div className="space-y-2 bg-secondary p-3 rounded-lg m-2">
                 <Button onClick={_ => {
-                  openUrl("https://bigmodel.cn/usercenter/proj-mgmt/apikeys")
+                  const url = selectedRegion === "z-ai"
+                    ? "https://z.ai/manage-apikey/apikey-list"
+                    : "https://bigmodel.cn/usercenter/proj-mgmt/apikeys"
+                  openUrl(url)
                 }} size="sm" variant="outline" className="text-sm">
                   <ExternalLinkIcon />
-                  进入控制台
+                  {t('glm.enterConsole')}
                 </Button>
               </div>
             </div>
 
             <div>
               <h2 className="text-card-foreground text-sm font-medium flex items-center gap-2">
-                第 3 步：输入 API Key
+                {t('glm.step3')}
               </h2>
               <div className="space-y-2 bg-secondary p-3 rounded-lg m-2">
                 <Input
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="请输入您的 API Key"
+                  placeholder={selectedRegion === "z-ai" ? t('glm.zaiApiKeyPlaceholder') : t('glm.zhipuApiKeyPlaceholder')}
                 />
               </div>
             </div>
@@ -165,7 +187,7 @@ export function GLMDialog(props: {
                 onClick={handleCreateConfig}
                 disabled={!apiKey.trim() || createConfigMutation.isPending}
               >
-                {createConfigMutation.isPending ? "创建中..." : "创建配置"}
+                {createConfigMutation.isPending ? t('glm.creating') : t('glm.createConfig')}
               </Button>
             </div>
           </div>

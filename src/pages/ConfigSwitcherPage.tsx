@@ -73,7 +73,7 @@ function ConfigStores() {
               trigger={
                 <Button variant="ghost" className="text-muted-foreground text-sm" size="sm">
                   <ZAI />
-                  使用智谱 GLM4.6
+                  {t('glm.useZhipuGlm')}
                 </Button>
               }
             />
@@ -108,7 +108,7 @@ function ConfigStores() {
                 trigger={
                   <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     <ZAI />
-                    使用智谱 GLM4.6
+                    {t('glm.useZhipuGlm')}
                   </DropdownMenuItem>
                 }
               />
