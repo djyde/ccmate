@@ -1,8 +1,9 @@
-import { Minimax, ZAI } from "@lobehub/icons";
+import { Kimi, Minimax, ZAI } from "@lobehub/icons";
 import { EllipsisVerticalIcon, PencilLineIcon, PlusIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { GLMDialog } from "@/components/GLMBanner";
+import { KimiDialog } from "@/components/KimiDialog";
 import { MiniMaxDialog } from "@/components/MiniMaxDialog";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -102,6 +103,18 @@ function ConfigStores() {
 								</Button>
 							}
 						/>
+						<KimiDialog
+							trigger={
+								<Button
+									variant="ghost"
+									className="text-muted-foreground text-sm"
+									size="sm"
+								>
+									<Kimi />
+									{t("kimi.useKimi")}
+								</Button>
+							}
+						/>
 					</div>
 				</div>
 			</div>
@@ -156,6 +169,14 @@ function ConfigStores() {
 									<DropdownMenuItem onSelect={(e) => e.preventDefault()}>
 										<Minimax />
 										{t("minimax.useMiniMax")}
+									</DropdownMenuItem>
+								}
+							/>
+							<KimiDialog
+								trigger={
+									<DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+										<Kimi />
+										{t("kimi.useKimi")}
 									</DropdownMenuItem>
 								}
 							/>

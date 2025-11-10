@@ -303,7 +303,9 @@ the subagent should follow.`);
 	return (
 		<div className="space-y-4 mt-4">
 			<div className="space-y-2">
-				<Label className="block" htmlFor="agent-name">{t("agents.agentName")}</Label>
+				<Label className="block" htmlFor="agent-name">
+					{t("agents.agentName")}
+				</Label>
 				<Input
 					id="agent-name"
 					value={agentName}
@@ -313,7 +315,9 @@ the subagent should follow.`);
 			</div>
 
 			<div className="space-y-2">
-				<Label className="block" htmlFor="agent-content">{t("agents.agentContent")}</Label>
+				<Label className="block" htmlFor="agent-content">
+					{t("agents.agentContent")}
+				</Label>
 				<div className="rounded-lg overflow-hidden border">
 					<CodeMirror
 						value={agentContent}
@@ -351,14 +355,10 @@ the subagent should follow.`);
 				<Button
 					onClick={handleCreateAgent}
 					disabled={
-						!agentName.trim() ||
-						!agentContent.trim() ||
-						writeAgent.isPending
+						!agentName.trim() || !agentContent.trim() || writeAgent.isPending
 					}
 				>
-					{writeAgent.isPending
-						? t("agents.creating")
-						: t("agents.create")}
+					{writeAgent.isPending ? t("agents.creating") : t("agents.create")}
 				</Button>
 			</div>
 		</div>
