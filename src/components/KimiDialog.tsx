@@ -34,7 +34,7 @@ export function KimiDialog(props: {
 				title: "Kimi For Coding",
 				settings: {
 					env: {
-						ANTHROPIC_AUTH_TOKEN: apiKey.trim(),
+						ANTHROPIC_API_KEY: apiKey.trim(),
 						ANTHROPIC_BASE_URL: "https://api.kimi.com/coding/",
 						ANTHROPIC_MODEL: "kimi-for-coding",
 						ANTHROPIC_DEFAULT_OPUS_MODEL: "kimi-for-coding",
