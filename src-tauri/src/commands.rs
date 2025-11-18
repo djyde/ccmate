@@ -86,16 +86,43 @@ fn default_enabled_globally() -> bool {
     true
 }
 
-fn get_mcp_store_path() -> Result<PathBuf, String> {
+fn read_or_init_stores_data_for_mcp() -> Result<(StoresData, PathBuf), String> {
     let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
     let config_dir = home_dir.join(APP_CONFIG_DIR);
 
-    if !config_dir.exists() {
-        std::fs::create_dir_all(&config_dir)
-            .map_err(|e| format!("Failed to create MCP config directory: {}", e))?;
+    std::fs::create_dir_all(&config_dir)
+        .map_err(|e| format!("Failed to create MCP config directory: {}", e))?;
+
+    let stores_file = config_dir.join("stores.json");
+
+    let stores_data = if stores_file.exists() {
+        let content = std::fs::read_to_string(&stores_file)
+            .map_err(|e| format!("Failed to read stores file: {}", e))?;
+        serde_json::from_str::<StoresData>(&content)
+            .map_err(|e| format!("Failed to parse stores file: {}", e))?
+    } else {
+        StoresData::default()
+    };
+
+    Ok((stores_data, stores_file))
+}
+
+fn write_stores_data(
+    stores_file: &std::path::Path,
+    stores_data: &StoresData,
+) -> Result<(), String> {
+    if let Some(parent) = stores_file.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create store directory: {}", e))?;
     }
 
-    Ok(config_dir.join("global_mcp_servers.json"))
+    let content = serde_json::to_string_pretty(stores_data)
+        .map_err(|e| format!("Failed to serialize stores data: {}", e))?;
+
+    std::fs::write(stores_file, content)
+        .map_err(|e| format!("Failed to write stores file: {}", e))?;
+
+    Ok(())
 }
 
 fn read_mcp_servers_from_claude() -> Result<std::collections::HashMap<String, serde_json::Value>, String> {
@@ -127,16 +154,9 @@ fn read_mcp_servers_from_claude() -> Result<std::collections::HashMap<String, se
 }
 
 fn load_mcp_store() -> Result<std::collections::HashMap<String, McpServer>, String> {
-    let store_path = get_mcp_store_path()?;
+    let (mut stores_data, stores_file) = read_or_init_stores_data_for_mcp()?;
 
-    let mut servers: std::collections::HashMap<String, McpServer> = if store_path.exists() {
-        let content = std::fs::read_to_string(&store_path)
-            .map_err(|e| format!("Failed to read MCP store: {}", e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse MCP store: {}", e))?
-    } else {
-        std::collections::HashMap::new()
-    };
+    let mut servers = stores_data.global_mcp_servers.clone();
 
     let claude_servers = read_mcp_servers_from_claude()?;
     let mut updated = false;
@@ -154,26 +174,17 @@ fn load_mcp_store() -> Result<std::collections::HashMap<String, McpServer>, Stri
     }
 
     if updated {
-        save_mcp_store(&servers)?;
+        stores_data.global_mcp_servers = servers.clone();
+        write_stores_data(&stores_file, &stores_data)?;
     }
 
     Ok(servers)
 }
 
 fn save_mcp_store(servers: &std::collections::HashMap<String, McpServer>) -> Result<(), String> {
-    let store_path = get_mcp_store_path()?;
-    if let Some(parent) = store_path.parent() {
-        if !parent.exists() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("Failed to create MCP store directory: {}", e))?;
-        }
-    }
-
-    let content = serde_json::to_string_pretty(servers)
-        .map_err(|e| format!("Failed to serialize MCP store: {}", e))?;
-    std::fs::write(&store_path, content)
-        .map_err(|e| format!("Failed to write MCP store: {}", e))?;
-    Ok(())
+    let (mut stores_data, stores_file) = read_or_init_stores_data_for_mcp()?;
+    stores_data.global_mcp_servers = servers.clone();
+    write_stores_data(&stores_file, &stores_data)
 }
 
 fn sync_enabled_servers_to_claude(servers: &std::collections::HashMap<String, McpServer>) -> Result<(), String> {
@@ -226,6 +237,22 @@ pub struct StoresData {
     pub configs: Vec<ConfigStore>,
     pub distinct_id: Option<String>,
     pub notification: Option<NotificationSettings>,
+    #[serde(default)]
+    pub global_mcp_servers: std::collections::HashMap<String, McpServer>,
+}
+
+impl Default for StoresData {
+    fn default() -> Self {
+        StoresData {
+            configs: vec![],
+            distinct_id: None,
+            notification: Some(NotificationSettings {
+                enable: true,
+                enabled_hooks: vec!["Notification".to_string()],
+            }),
+            global_mcp_servers: std::collections::HashMap::new(),
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -467,14 +494,7 @@ pub async fn create_config(
         serde_json::from_str::<StoresData>(&content)
             .map_err(|e| format!("Failed to parse stores file: {}", e))?
     } else {
-        StoresData {
-            configs: vec![],
-            distinct_id: None,
-            notification: Some(NotificationSettings {
-                enable: true,
-                enabled_hooks: vec!["Notification".to_string()],
-            }),
-        }
+        StoresData::default()
     };
 
     // Determine if this should be the active store (true if no other stores exist)
@@ -1381,14 +1401,7 @@ async fn get_or_create_distinct_id() -> Result<String, String> {
         serde_json::from_str::<StoresData>(&content)
             .map_err(|e| format!("Failed to parse stores file: {}", e))?
     } else {
-        StoresData {
-            configs: vec![],
-            distinct_id: None,
-            notification: Some(NotificationSettings {
-                enable: true,
-                enabled_hooks: vec!["Notification".to_string()],
-            }),
-        }
+        StoresData::default()
     };
 
     // Return existing distinct_id or create new one
@@ -1941,11 +1954,8 @@ pub async fn update_notification_settings(settings: NotificationSettings) -> Res
 
     if !stores_file.exists() {
         // Create stores.json with notification settings if it doesn't exist
-        let stores_data = StoresData {
-            configs: vec![],
-            distinct_id: None,
-            notification: Some(settings.clone()),
-        };
+        let mut stores_data = StoresData::default();
+        stores_data.notification = Some(settings.clone());
 
         // Ensure app config directory exists
         std::fs::create_dir_all(&app_config_path)
