@@ -32,15 +32,7 @@
 		"createUpdaterArtifacts": true,
 		"active": true,
 		"targets": "all",
-		"icon": ["icons/icon.icns", "icons/icon.ico", "icons/icon.png"],
-		"linux": {
-			"deb": {
-				"depends": ["libgtk-3-0", "libwebkit2gtk-4.1-0", "libappindicator3-1"]
-			},
-			"appimage": {
-				"bundleMediaFramework": true
-			}
-		}
+		"icon": ["icons/icon.icns", "icons/icon.ico"]
 	},
 	"plugins": {
 		"updater": {
