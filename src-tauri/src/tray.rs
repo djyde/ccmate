@@ -119,6 +119,16 @@ pub async fn build_tray_menu<R: Runtime>(
                 let configs_label = tauri::menu::MenuItem::with_id(app, "configs_label", "Configs", false, None::<&str>)?;
                 builder = builder.item(&configs_label);
 
+                // Add "Default" option for original Claude settings
+                let current_store = stores.iter().find(|s| s.using);
+                let is_using_default = current_store.is_none();
+                let default_prefix = if is_using_default { "✓ " } else { "  " };
+                let default_label = format!("{}Default", default_prefix);
+
+                let default_item = MenuItemBuilder::with_id("default_config", default_label)
+                    .build(app)?;
+                builder = builder.item(&default_item);
+
                 // Add config items
                 for store in stores {
                     let prefix = if store.using { "✓ " } else { "  " };
@@ -205,6 +215,51 @@ pub fn handle_tray_menu_event<R: Runtime>(app_handle: &AppHandle<R>, event_id: &
         }
         "quit_app" => {
             app_handle.exit(0);
+            true
+        }
+        "default_config" => {
+            let app_clone = app_handle.clone();
+
+            // Switch to default Claude settings
+            tauri::async_runtime::spawn(async move {
+                println!("🔄 Switching to default Claude settings...");
+
+                match crate::commands::reset_to_original_config().await {
+                    Ok(_) => {
+                        println!("✅ Switched to default Claude settings successfully");
+
+                        // Small delay to ensure the file system has synced
+                        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+                        // Rebuild the tray menu to update checkmarks
+                        println!("🔄 About to rebuild tray menu...");
+                        if let Err(e) = rebuild_tray_menu(app_clone.clone()).await {
+                            eprintln!("❌ Failed to rebuild tray menu: {}", e);
+                        } else {
+                            println!("✅ Tray menu updated with new checkmark");
+                        }
+
+                        // Show notification using the notification plugin
+                        let _ = app_clone
+                            .notification()
+                            .builder()
+                            .title("CC Mate")
+                            .body("Claude Code config switched to \"Default\"")
+                            .show();
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Failed to switch to default settings: {}", e);
+
+                        // Show error notification
+                        let _ = app_clone
+                            .notification()
+                            .builder()
+                            .title("CC Mate")
+                            .body(&format!("Error: {}", e))
+                            .show();
+                    }
+                }
+            });
             true
         }
         id if id.starts_with("config_") => {
