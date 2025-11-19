@@ -47,7 +47,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: 'pnpm'
+
+      - name: install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -59,8 +63,18 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: install pnpm
-        run: npm i pnpm -g
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: install frontend dependencies
         run: pnpm i
