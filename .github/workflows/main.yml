@@ -59,8 +59,10 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: install pnpm
-        run: npm i pnpm -g
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
 
       - name: install frontend dependencies
         run: pnpm i
