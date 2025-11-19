@@ -1387,29 +1387,42 @@ fn get_os_version() -> Result<String, String> {
     #[cfg(target_os = "linux")]
     {
         use std::fs;
-        // Try to read from /etc/os-release first
+        // Try to get distribution info from /etc/os-release
+        let mut distro_name = "Unknown".to_string();
+        let mut version = "Unknown".to_string();
+        
         if let Ok(content) = fs::read_to_string("/etc/os-release") {
             for line in content.lines() {
-                if line.starts_with("VERSION_ID=") {
-                    let version = line.split('=').nth(1)
+                if line.starts_with("ID=") {
+                    distro_name = line.split('=').nth(1)
                         .unwrap_or("Unknown")
-                        .trim_matches('"');
-                    return Ok(version.to_string());
+                        .trim_matches('"')
+                        .to_string();
+                } else if line.starts_with("VERSION_ID=") {
+                    version = line.split('=').nth(1)
+                        .unwrap_or("Unknown")
+                        .trim_matches('"')
+                        .to_string();
                 }
             }
         }
-
-        // Fallback to uname
+        
+        // If we got good distribution info, use it
+        if distro_name != "Unknown" && version != "Unknown" {
+            return Ok(format!("{} {}", distro_name, version));
+        }
+        
+        // Fallback to kernel version
         use std::process::Command;
         let output = Command::new("uname")
             .arg("-r")
             .output()
             .map_err(|e| format!("Failed to get Linux kernel version: {}", e))?;
 
-        let version = String::from_utf8(output.stdout)
+        let kernel_version = String::from_utf8(output.stdout)
             .map_err(|e| format!("Failed to parse Linux version: {}", e))?;
 
-        Ok(version.trim().to_string())
+        Ok(format!("Linux Kernel {}", kernel_version.trim()))
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
@@ -1577,7 +1590,14 @@ fn get_latest_hook_command() -> serde_json::Value {
             "type": "command",
             "command": "powershell -Command \"try { Invoke-RestMethod -Uri http://localhost:59948/claude_code/hooks -Method POST -ContentType 'application/json' -Body $input -ErrorAction Stop } catch { '' }\""
         })
+    } else if cfg!(target_os = "linux") {
+        serde_json::json!({
+            "__ccmate__": true,
+            "type": "command",
+            "command": "curl -s -X POST http://localhost:59948/claude_code/hooks -H 'Content-Type: application/json' --data-binary @- 2>/dev/null || echo"
+        })
     } else {
+        // macOS and other Unix-like systems
         serde_json::json!({
             "__ccmate__": true,
             "type": "command",
