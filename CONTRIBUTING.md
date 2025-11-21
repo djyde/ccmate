@@ -24,8 +24,8 @@ npm install -g pnpm
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/djyde/ccconfig.git
-cd ccconfig
+git clone https://github.com/djyde/ccmate.git
+cd ccmate
 ```
 
 2. **Install dependencies**
@@ -162,7 +162,7 @@ All contributions go through code review to ensure:
 - Proper testing and documentation
 - Security considerations
 
-Check the [GitHub Issues](https://github.com/djyde/ccconfig/issues) for specific items that need help.
+Check the [GitHub Issues](https://github.com/djyde/ccmate/issues) for specific items that need help.
 
 ## 🙏 Recognition
 

@@ -4,7 +4,7 @@
 
 **A modern desktop application for managing Claude Code configuration files**
 
-[Download Latest Release](https://randynamic.org/ccmate) • [Report Issues](https://github.com/djyde/ccconfig/issues) • [Contributing Guide](CONTRIBUTING.md)
+[Download Latest Release](https://randynamic.org/ccmate) • [Report Issues](https://github.com/djyde/ccmate/issues) • [Contributing Guide](CONTRIBUTING.md)
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0) [![Homebrew](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/djyde/brew/main/Casks/ccmate.rb&query=$.version&label=homebrew&color=blue)](https://github.com/djyde/brew)
 
@@ -86,9 +86,9 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ### Getting Help
 
-- 📖 [Documentation](https://github.com/djyde/ccconfig/wiki)
-- 🐛 [Report Issues](https://github.com/djyde/ccconfig/issues)
-- 💬 [Discussions](https://github.com/djyde/ccconfig/discussions)
+- 📖 [Documentation](https://github.com/djyde/ccmate/wiki)
+- 🐛 [Report Issues](https://github.com/djyde/ccmate/issues)
+- 💬 [Discussions](https://github.com/djyde/ccmate/discussions)
 - 📋 [Contributing Guide](CONTRIBUTING.md)
 
 ## 📄 License
@@ -103,6 +103,6 @@ See the [LICENSE](LICENSE) file for details.
 
 **Made with ❤️ by the community**
 
-[⭐ Star this repo](https://github.com/djyde/ccconfig) • [🐦 Follow updates](https://github.com/djyde/ccconfig/releases)
+[⭐ Star this repo](https://github.com/djyde/ccmate) • [🐦 Follow updates](https://github.com/djyde/ccmate/releases)
 
 </div>
