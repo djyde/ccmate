@@ -29,7 +29,14 @@
       "Bash(gh run list:*)",
       "Bash(gh release edit:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git log:*)",
+      "Bash(awk:*)",
+      "Bash(gh api:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git push:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh:*)"
     ],
     "deny": [],
     "ask": []
