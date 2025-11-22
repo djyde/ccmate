@@ -33,15 +33,18 @@ import {
 	useAddGlobalMcpServer,
 	useDeleteGlobalMcpServer,
 	useGlobalMcpServers,
+	useSetGlobalMcpServerEnabled,
 	useUpdateGlobalMcpServer,
 } from "@/lib/query";
 import { useCodeMirrorTheme } from "@/lib/use-codemirror-theme";
+import { Switch } from "@/components/ui/switch";
 
 function MCPPageContent() {
 	const { t } = useTranslation();
 	const { data: mcpServers } = useGlobalMcpServers();
 	const updateMcpServer = useUpdateGlobalMcpServer();
 	const deleteMcpServer = useDeleteGlobalMcpServer();
+	const setGlobalMcpServerEnabled = useSetGlobalMcpServerEnabled();
 	const [serverConfigs, setServerConfigs] = useState<Record<string, string>>(
 		{},
 	);
@@ -85,8 +88,8 @@ function MCPPageContent() {
 		}
 	};
 
-	const formatConfigForDisplay = (server: McpServer): string => {
-		return JSON.stringify(server, null, 2);
+	const formatConfigForDisplay = (config: McpServer["config"]): string => {
+		return JSON.stringify(config ?? {}, null, 2);
 	};
 
 	const serverEntries = Object.entries(mcpServers || {}).sort(([a], [b]) =>
@@ -158,11 +161,33 @@ function MCPPageContent() {
 								</AccordionTrigger>
 								<AccordionContent className="pb-3">
 									<div className="px-3 pt-3 space-y-3">
+										<div className="flex items-center justify-between rounded-md border px-3 py-2">
+											<div className="space-y-0.5">
+												<p className="text-sm font-medium">
+													{t("mcp.enableGlobally")}
+												</p>
+												<p className="text-xs text-muted-foreground">
+													{serverConfig.enabledGlobally
+														? t("mcp.enabledGloballyStatus")
+														: t("mcp.disabledGloballyStatus")}
+												</p>
+											</div>
+											<Switch
+												checked={serverConfig.enabledGlobally}
+												onCheckedChange={(checked) =>
+													setGlobalMcpServerEnabled.mutate({
+														serverName,
+														enabledGlobally: checked,
+													})
+												}
+												disabled={setGlobalMcpServerEnabled.isPending}
+											/>
+										</div>
 										<div className="rounded-lg overflow-hidden border">
 											<CodeMirror
 												value={
 													serverConfigs[serverName] ||
-													formatConfigForDisplay(serverConfig)
+													formatConfigForDisplay(serverConfig.config)
 												}
 												height="180px"
 												theme={codeMirrorTheme}

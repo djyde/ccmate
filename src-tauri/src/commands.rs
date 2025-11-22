@@ -77,8 +77,159 @@ pub struct ConfigStore {
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 pub struct McpServer {
-    #[serde(flatten)]
     pub config: serde_json::Value,
+    #[serde(rename = "enabledGlobally", default = "default_enabled_globally")]
+    pub enabled_globally: bool,
+}
+
+fn default_enabled_globally() -> bool {
+    true
+}
+
+fn read_or_init_stores_data_for_mcp() -> Result<(StoresData, PathBuf), String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let config_dir = home_dir.join(APP_CONFIG_DIR);
+
+    std::fs::create_dir_all(&config_dir)
+        .map_err(|e| format!("Failed to create MCP config directory: {}", e))?;
+
+    let stores_file = config_dir.join("stores.json");
+
+    let stores_data = if stores_file.exists() {
+        let content = std::fs::read_to_string(&stores_file)
+            .map_err(|e| format!("Failed to read stores file: {}", e))?;
+        serde_json::from_str::<StoresData>(&content)
+            .map_err(|e| format!("Failed to parse stores file: {}", e))?
+    } else {
+        StoresData::default()
+    };
+
+    Ok((stores_data, stores_file))
+}
+
+fn write_stores_data(
+    stores_file: &std::path::Path,
+    stores_data: &StoresData,
+) -> Result<(), String> {
+    if let Some(parent) = stores_file.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create store directory: {}", e))?;
+    }
+
+    let content = serde_json::to_string_pretty(stores_data)
+        .map_err(|e| format!("Failed to serialize stores data: {}", e))?;
+
+    std::fs::write(stores_file, content)
+        .map_err(|e| format!("Failed to write stores file: {}", e))?;
+
+    Ok(())
+}
+
+fn read_mcp_servers_from_claude() -> Result<std::collections::HashMap<String, serde_json::Value>, String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let claude_json_path = home_dir.join(".claude.json");
+
+    if !claude_json_path.exists() {
+        return Ok(std::collections::HashMap::new());
+    }
+
+    let content = std::fs::read_to_string(&claude_json_path)
+        .map_err(|e| format!("Failed to read .claude.json: {}", e))?;
+
+    let json_value: Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse .claude.json: {}", e))?;
+
+    let mcp_servers_obj = json_value
+        .get("mcpServers")
+        .and_then(|servers| servers.as_object())
+        .cloned()
+        .unwrap_or_else(serde_json::Map::new);
+
+    let mut result = std::collections::HashMap::new();
+    for (name, config) in mcp_servers_obj {
+        result.insert(name, config);
+    }
+
+    Ok(result)
+}
+
+fn load_mcp_store() -> Result<std::collections::HashMap<String, McpServer>, String> {
+    let (mut stores_data, stores_file) = read_or_init_stores_data_for_mcp()?;
+
+    let mut servers = stores_data.global_mcp_servers.clone();
+
+    let claude_servers = read_mcp_servers_from_claude()?;
+    let mut updated = false;
+    for (name, config) in claude_servers {
+        if !servers.contains_key(&name) {
+            servers.insert(
+                name.clone(),
+                McpServer {
+                    config,
+                    enabled_globally: true,
+                },
+            );
+            updated = true;
+        }
+    }
+
+    if updated {
+        stores_data.global_mcp_servers = servers.clone();
+        write_stores_data(&stores_file, &stores_data)?;
+    }
+
+    Ok(servers)
+}
+
+fn save_mcp_store(servers: &std::collections::HashMap<String, McpServer>) -> Result<(), String> {
+    let (mut stores_data, stores_file) = read_or_init_stores_data_for_mcp()?;
+    stores_data.global_mcp_servers = servers.clone();
+    write_stores_data(&stores_file, &stores_data)
+}
+
+fn sync_enabled_servers_to_claude(servers: &std::collections::HashMap<String, McpServer>) -> Result<(), String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let claude_json_path = home_dir.join(".claude.json");
+
+    if !claude_json_path.exists() && servers.values().all(|s| !s.enabled_globally) {
+        // Nothing to sync if file doesn't exist and there are no enabled servers
+        return Ok(());
+    }
+
+    let mut json_value = if claude_json_path.exists() {
+        let content = std::fs::read_to_string(&claude_json_path)
+            .map_err(|e| format!("Failed to read .claude.json: {}", e))?;
+        serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse .claude.json: {}", e))?
+    } else {
+        Value::Object(serde_json::Map::new())
+    };
+
+    if !json_value.is_object() {
+        json_value = Value::Object(serde_json::Map::new());
+    }
+
+    let obj = json_value.as_object_mut().unwrap();
+    let mut enabled_map = serde_json::Map::new();
+    for (name, server) in servers {
+        if server.enabled_globally {
+            enabled_map.insert(name.clone(), server.config.clone());
+        }
+    }
+
+    if enabled_map.is_empty() {
+        obj.remove("mcpServers");
+    } else {
+        obj.insert("mcpServers".to_string(), Value::Object(enabled_map));
+    }
+
+    let json_content = serde_json::to_string_pretty(&json_value)
+        .map_err(|e| format!("Failed to serialize JSON: {}", e))?;
+
+    std::fs::write(&claude_json_path, json_content)
+        .map_err(|e| format!("Failed to write .claude.json: {}", e))?;
+
+    Ok(())
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -86,6 +237,22 @@ pub struct StoresData {
     pub configs: Vec<ConfigStore>,
     pub distinct_id: Option<String>,
     pub notification: Option<NotificationSettings>,
+    #[serde(default)]
+    pub global_mcp_servers: std::collections::HashMap<String, McpServer>,
+}
+
+impl Default for StoresData {
+    fn default() -> Self {
+        StoresData {
+            configs: vec![],
+            distinct_id: None,
+            notification: Some(NotificationSettings {
+                enable: true,
+                enabled_hooks: vec!["Notification".to_string()],
+            }),
+            global_mcp_servers: std::collections::HashMap::new(),
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -327,14 +494,7 @@ pub async fn create_config(
         serde_json::from_str::<StoresData>(&content)
             .map_err(|e| format!("Failed to parse stores file: {}", e))?
     } else {
-        StoresData {
-            configs: vec![],
-            distinct_id: None,
-            notification: Some(NotificationSettings {
-                enable: true,
-                enabled_hooks: vec!["Notification".to_string()],
-            }),
-        }
+        StoresData::default()
     };
 
     // Determine if this should be the active store (true if no other stores exist)
@@ -784,38 +944,12 @@ pub async fn open_config_path() -> Result<(), String> {
 
 #[tauri::command]
 pub async fn get_global_mcp_servers() -> Result<std::collections::HashMap<String, McpServer>, String> {
-    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
-    let claude_json_path = home_dir.join(".claude.json");
-
-    if !claude_json_path.exists() {
-        return Ok(std::collections::HashMap::new());
-    }
-
-    let content = std::fs::read_to_string(&claude_json_path)
-        .map_err(|e| format!("Failed to read .claude.json: {}", e))?;
-
-    let json_value: Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse .claude.json: {}", e))?;
-
-    let mcp_servers_obj = json_value.get("mcpServers")
-        .and_then(|servers| servers.as_object())
-        .cloned()
-        .unwrap_or_else(serde_json::Map::new);
-
-    let mut result = std::collections::HashMap::new();
-    for (name, config) in mcp_servers_obj {
-        let mcp_server = McpServer {
-            config: config.clone(),
-        };
-        result.insert(name.clone(), mcp_server);
-    }
-
-    Ok(result)
+    load_mcp_store()
 }
 
 #[tauri::command]
 pub async fn check_mcp_server_exists(server_name: String) -> Result<bool, String> {
-    let mcp_servers = get_global_mcp_servers().await?;
+    let mcp_servers = load_mcp_store()?;
     Ok(mcp_servers.contains_key(&server_name))
 }
 
@@ -824,88 +958,50 @@ pub async fn update_global_mcp_server(
     server_name: String,
     server_config: Value,
 ) -> Result<(), String> {
-    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
-    let claude_json_path = home_dir.join(".claude.json");
+    let mut servers = load_mcp_store()?;
+    let enabled = servers
+        .get(&server_name)
+        .map(|server| server.enabled_globally)
+        .unwrap_or(true);
 
-    // Read existing .claude.json or create new structure
-    let mut json_value = if claude_json_path.exists() {
-        let content = std::fs::read_to_string(&claude_json_path)
-            .map_err(|e| format!("Failed to read .claude.json: {}", e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse .claude.json: {}", e))?
-    } else {
-        Value::Object(serde_json::Map::new())
-    };
+    servers.insert(
+        server_name.clone(),
+        McpServer {
+            config: server_config,
+            enabled_globally: enabled,
+        },
+    );
 
-    // Update mcpServers object
-    let mcp_servers = json_value
-        .as_object_mut()
-        .unwrap()
-        .entry("mcpServers".to_string())
-        .or_insert_with(|| Value::Object(serde_json::Map::new()))
-        .as_object_mut()
-        .unwrap();
+    save_mcp_store(&servers)?;
+    sync_enabled_servers_to_claude(&servers)?;
 
-    // Update the specific server
-    mcp_servers.insert(server_name, server_config);
+    Ok(())
+}
 
-    // Write back to file
-    let json_content = serde_json::to_string_pretty(&json_value)
-        .map_err(|e| format!("Failed to serialize JSON: {}", e))?;
+#[tauri::command]
+pub async fn set_global_mcp_server_enabled(server_name: String, enabled: bool) -> Result<(), String> {
+    let mut servers = load_mcp_store()?;
 
-    std::fs::write(&claude_json_path, json_content)
-        .map_err(|e| format!("Failed to write .claude.json: {}", e))?;
+    let server = servers
+        .get_mut(&server_name)
+        .ok_or_else(|| format!("MCP server '{}' not found", server_name))?;
+    server.enabled_globally = enabled;
+
+    save_mcp_store(&servers)?;
+    sync_enabled_servers_to_claude(&servers)?;
 
     Ok(())
 }
 
 #[tauri::command]
 pub async fn delete_global_mcp_server(server_name: String) -> Result<(), String> {
-    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
-    let claude_json_path = home_dir.join(".claude.json");
-
-    if !claude_json_path.exists() {
-        return Err("Claude configuration file does not exist".to_string());
-    }
-
-    // Read existing .claude.json
-    let content = std::fs::read_to_string(&claude_json_path)
-        .map_err(|e| format!("Failed to read .claude.json: {}", e))?;
-
-    let mut json_value: Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse .claude.json: {}", e))?;
-
-    // Check if mcpServers exists
-    let mcp_servers = json_value
-        .as_object_mut()
-        .unwrap()
-        .get_mut("mcpServers")
-        .and_then(|servers| servers.as_object_mut());
-
-    let mcp_servers = match mcp_servers {
-        Some(servers) => servers,
-        None => return Err("No mcpServers found in .claude.json".to_string()),
-    };
-
-    // Check if the server exists
-    if !mcp_servers.contains_key(&server_name) {
+    let mut servers = load_mcp_store()?;
+    if servers.remove(&server_name).is_none() {
         return Err(format!("MCP server '{}' not found", server_name));
     }
 
-    // Remove the server
-    mcp_servers.remove(&server_name);
-
-    // If mcpServers is now empty, we can optionally remove the entire mcpServers object
-    if mcp_servers.is_empty() {
-        json_value.as_object_mut().unwrap().remove("mcpServers");
-    }
-
-    // Write back to file
-    let json_content = serde_json::to_string_pretty(&json_value)
-        .map_err(|e| format!("Failed to serialize JSON: {}", e))?;
-
-    std::fs::write(&claude_json_path, json_content)
-        .map_err(|e| format!("Failed to write .claude.json: {}", e))?;
+    save_mcp_store(&servers)?;
+    sync_enabled_servers_to_claude(&servers)?;
 
     Ok(())
 }
@@ -1305,14 +1401,7 @@ async fn get_or_create_distinct_id() -> Result<String, String> {
         serde_json::from_str::<StoresData>(&content)
             .map_err(|e| format!("Failed to parse stores file: {}", e))?
     } else {
-        StoresData {
-            configs: vec![],
-            distinct_id: None,
-            notification: Some(NotificationSettings {
-                enable: true,
-                enabled_hooks: vec!["Notification".to_string()],
-            }),
-        }
+        StoresData::default()
     };
 
     // Return existing distinct_id or create new one
@@ -1865,11 +1954,8 @@ pub async fn update_notification_settings(settings: NotificationSettings) -> Res
 
     if !stores_file.exists() {
         // Create stores.json with notification settings if it doesn't exist
-        let stores_data = StoresData {
-            configs: vec![],
-            distinct_id: None,
-            notification: Some(settings.clone()),
-        };
+        let mut stores_data = StoresData::default();
+        stores_data.notification = Some(settings.clone());
 
         // Ensure app config directory exists
         std::fs::create_dir_all(&app_config_path)

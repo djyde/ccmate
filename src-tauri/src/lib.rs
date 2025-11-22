@@ -182,6 +182,7 @@ pub fn run() {
             open_config_path,
             get_global_mcp_servers,
             update_global_mcp_server,
+            set_global_mcp_server_enabled,
             delete_global_mcp_server,
             check_mcp_server_exists,
             read_claude_projects,
