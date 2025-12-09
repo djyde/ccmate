@@ -1,5 +1,8 @@
 # CC Mate - Configure your Claude Code without pain
 
+[![Run in Smithery](https://smithery.ai/badge/skills/djyde)](https://smithery.ai/skills?ns=djyde&utm_source=github&utm_medium=badge)
+
+
 <div align="center">
 
 **A modern desktop application for managing Claude Code configuration files**
