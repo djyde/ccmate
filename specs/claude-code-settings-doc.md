@@ -207,7 +207,7 @@ All environment variables can also be configured in [`settings.json`](https://do
 | `MCP_TOOL_TIMEOUT` | Timeout in milliseconds for MCP tool execution |
 | `NO_PROXY` | List of domains and IPs to which requests will be directly issued, bypassing proxy |
 | `SLASH_COMMAND_TOOL_CHAR_BUDGET` | Maximum number of characters for slash command metadata shown to [SlashCommand tool](https://docs.claude.com/en/docs/claude-code/slash-commands#slashcommand-tool) (default: 15000) |
-| `USE_BUILTIN_RIPGREP` | Set to `0` to use system-installed `rg` intead of `rg` included with Claude Code |
+| `USE_BUILTIN_RIPGREP` | Set to `0` to use system-installed `rg` instead of `rg` included with Claude Code |
 | `VERTEX_REGION_CLAUDE_3_5_HAIKU` | Override region for Claude 3.5 Haiku when using Vertex AI |
 | `VERTEX_REGION_CLAUDE_3_5_SONNET` | Override region for Claude Sonnet 3.5 when using Vertex AI |
 | `VERTEX_REGION_CLAUDE_3_7_SONNET` | Override region for Claude 3.7 Sonnet when using Vertex AI |
