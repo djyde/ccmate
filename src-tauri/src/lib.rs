@@ -144,12 +144,38 @@ pub fn run() {
                 }
             });
 
-            // Always update hooks to ensure they have the latest command settings
+            // Automatically add or update Claude Code hooks
             tauri::async_runtime::spawn(async move {
-                println!("Updating Claude Code hooks to latest version...");
-                match commands::update_claude_code_hook().await {
-                    Ok(()) => println!("✅ Claude Code hooks updated/checked successfully"),
-                    Err(e) => eprintln!("Failed to update Claude Code hooks: {}", e),
+                println!("Checking Claude Code hooks...");
+
+                // Check if ccmate hooks already exist
+                match commands::check_claude_code_hooks_exist() {
+                    Ok(hooks_exist) => {
+                        if hooks_exist {
+                            // Hooks exist, update them to latest version
+                            println!("Hooks found, updating to latest version...");
+                            match commands::update_claude_code_hook().await {
+                                Ok(()) => println!("✅ Claude Code hooks updated successfully"),
+                                Err(e) => eprintln!("Failed to update Claude Code hooks: {}", e),
+                            }
+                        } else {
+                            // No hooks found, add them
+                            println!("No hooks found, adding Claude Code hooks...");
+                            match commands::add_claude_code_hook().await {
+                                Ok(()) => println!("✅ Claude Code hooks added successfully"),
+                                Err(e) => eprintln!("Failed to add Claude Code hooks: {}", e),
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to check hooks existence: {}", e);
+                        // Fallback: try to add hooks
+                        println!("Attempting to add hooks as fallback...");
+                        match commands::add_claude_code_hook().await {
+                            Ok(()) => println!("✅ Claude Code hooks added successfully"),
+                            Err(e) => eprintln!("Failed to add Claude Code hooks: {}", e),
+                        }
+                    }
                 }
             });
 
