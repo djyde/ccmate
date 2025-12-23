@@ -2067,3 +2067,58 @@ pub async fn delete_claude_agent(agent_name: String) -> Result<(), String> {
 
     Ok(())
 }
+
+/// Generate environment variables export string from store settings
+#[tauri::command]
+pub async fn generate_env_vars(store_id: String) -> Result<String, String> {
+    let stores = get_stores().await?;
+    let store = stores
+        .into_iter()
+        .find(|s| s.id == store_id)
+        .ok_or_else(|| format!("Store with id '{}' not found", store_id))?;
+
+    let mut env_vars = Vec::new();
+
+    // Extract env variables from settings
+    if let Some(env_obj) = store.settings.get("env").and_then(|e| e.as_object()) {
+        for (key, value) in env_obj {
+            if let Some(value_str) = value.as_str() {
+                // Format as export KEY=value with proper shell escaping
+                let escaped_value = escape_shell_value(value_str);
+                env_vars.push(format!("export {}={}", key, escaped_value));
+            }
+        }
+    }
+
+    // Also extract model if present
+    if let Some(model) = store.settings.get("model").and_then(|m| m.as_str()) {
+        let escaped_model = escape_shell_value(model);
+        env_vars.push(format!("export ANTHROPIC_MODEL={}", escaped_model));
+    }
+
+    if env_vars.is_empty() {
+        return Ok(String::new());
+    }
+
+    // Join with newlines
+    Ok(env_vars.join("\n"))
+}
+
+/// Escape shell value by wrapping in single quotes and escaping existing single quotes
+fn escape_shell_value(value: &str) -> String {
+    // Single-quote escaping: replace ' with '"'"'
+    let escaped = value.replace('\'', "'\"'\"'");
+    format!("'{}'", escaped)
+}
+
+/// Copy text to clipboard
+#[tauri::command]
+pub async fn copy_to_clipboard(text: String) -> Result<(), String> {
+    let mut clipboard = arboard::Clipboard::new()
+        .map_err(|e| format!("Failed to access clipboard: {}", e))?;
+
+    clipboard.set_text(&text)
+        .map_err(|e| format!("Failed to copy to clipboard: {}", e))?;
+
+    Ok(())
+}

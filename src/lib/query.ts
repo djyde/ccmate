@@ -624,3 +624,11 @@ const rebuildTrayMenu = async () => {
 		console.error("Failed to rebuild tray menu:", error);
 	}
 };
+
+// Environment variables hook
+export const useGenerateEnvVars = () => {
+	return useMutation({
+		mutationFn: (storeId: string) =>
+			invoke<string>("generate_env_vars", { storeId }),
+	});
+};

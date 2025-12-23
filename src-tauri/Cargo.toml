@@ -36,6 +36,7 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 axum = "0.7"
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors"] }
+arboard = "3.2"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"

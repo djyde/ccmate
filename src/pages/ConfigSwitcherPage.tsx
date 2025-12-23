@@ -1,4 +1,5 @@
 import { Kimi, Minimax, ZAI } from "@lobehub/icons";
+import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { EllipsisVerticalIcon, PencilLineIcon, PlusIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -22,8 +23,10 @@ import {
 	useResetToOriginalConfig,
 	useSetCurrentConfig,
 	useStores,
+	useGenerateEnvVars,
 	type ConfigStore,
 } from "../lib/query";
+import { toast } from "sonner";
 
 interface ConfigCardProps {
 	store: ConfigStore;
@@ -31,9 +34,10 @@ interface ConfigCardProps {
 	onStoreClick: (storeId: string, isCurrentStore: boolean) => void;
 	onEditClick: (storeId: string) => void;
 	onDeleteClick: (storeId: string, storeTitle: string) => void;
+	onCopyEnvVarsClick: (storeId: string) => void;
 }
 
-function ConfigCard({ store, isCurrentStore, onStoreClick, onEditClick, onDeleteClick }: ConfigCardProps) {
+function ConfigCard({ store, isCurrentStore, onStoreClick, onEditClick, onDeleteClick, onCopyEnvVarsClick }: ConfigCardProps) {
 	const { t } = useTranslation();
 	const [contextMenuOpen, setContextMenuOpen] = useState(false);
 	const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
@@ -153,6 +157,15 @@ function ConfigCard({ store, isCurrentStore, onStoreClick, onEditClick, onDelete
 						{t("contextMenu.edit")}
 					</button>
 					<button
+						className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+						onClick={() => {
+							onCopyEnvVarsClick(store.id);
+							closeMenu();
+						}}
+					>
+						{t("contextMenu.copyEnvVars")}
+					</button>
+					<button
 						className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground text-destructive focus:text-destructive"
 						onClick={() => {
 							onDeleteClick(store.id, store.title);
@@ -183,6 +196,7 @@ function ConfigStores() {
 	const setCurrentStoreMutation = useSetCurrentConfig();
 	const resetToOriginalMutation = useResetToOriginalConfig();
 	const deleteStoreMutation = useDeleteConfig();
+	const generateEnvVarsMutation = useGenerateEnvVars();
 	const navigate = useNavigate();
 
 	const isOriginalConfigActive = !stores.some((store) => store.using);
@@ -219,6 +233,25 @@ function ConfigStores() {
 			await deleteStoreMutation.mutateAsync({
 				storeId,
 			});
+		}
+	};
+
+	const handleCopyEnvVars = async (storeId: string) => {
+		try {
+			const envVarsString = await generateEnvVarsMutation.mutateAsync(storeId);
+
+			if (!envVarsString) {
+				toast.error(t("configSwitcher.noEnvVars"));
+				return;
+			}
+
+			// Use Tauri backend command to copy to clipboard
+			await invoke("copy_to_clipboard", { text: envVarsString });
+
+			toast.success(t("configSwitcher.envVarsCopied"));
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			toast.error(t("configSwitcher.copyEnvVarsFailed", { error: errorMessage }));
 		}
 	};
 
@@ -377,6 +410,7 @@ function ConfigStores() {
 							onStoreClick={handleStoreClick}
 							onEditClick={(storeId) => navigate(`/edit/${storeId}`)}
 							onDeleteClick={handleDeleteConfig}
+							onCopyEnvVarsClick={handleCopyEnvVars}
 						/>
 					);
 				})}

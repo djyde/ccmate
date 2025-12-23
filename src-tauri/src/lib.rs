@@ -205,7 +205,9 @@ pub fn run() {
             delete_claude_command,
             read_claude_agents,
             write_claude_agent,
-            delete_claude_agent
+            delete_claude_agent,
+            generate_env_vars,
+            copy_to_clipboard
         ])
         .on_window_event(|window, event| {
             #[cfg(target_os = "macos")]
