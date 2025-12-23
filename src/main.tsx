@@ -4,6 +4,7 @@ import ReactDOM from "react-dom/client";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "./components/ui/sonner";
+import { ContextMenuProvider } from "./components/ui/context-menu";
 import { Router } from "./router";
 import "./i18n";
 import "./tw.css";
@@ -29,8 +30,10 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 					enableSystem
 					disableTransitionOnChange
 				>
-					<Router />
-					<Toaster />
+					<ContextMenuProvider>
+						<Router />
+						<Toaster />
+					</ContextMenuProvider>
 				</ThemeProvider>
 			</QueryClientProvider>
 		</ErrorBoundary>

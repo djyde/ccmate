@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { RouteWrapper } from "./components/RouteWrapper";
+import { useGlobalContextMenu } from "@/hooks/useGlobalContextMenu";
 import { AgentsPage } from "./pages/AgentsPage";
 import { CommandsPage } from "./pages/CommandsPage";
 import { ConfigEditorPage } from "./pages/ConfigEditorPage";
@@ -125,6 +126,11 @@ const router = createBrowserRouter([
 	},
 ]);
 
-export function Router() {
+const RouterWithContextMenu = () => {
+	useGlobalContextMenu();
 	return <RouterProvider router={router} />;
+};
+
+export function Router() {
+	return <RouterWithContextMenu />;
 }

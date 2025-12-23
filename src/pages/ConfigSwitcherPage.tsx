@@ -1,7 +1,9 @@
 import { Kimi, Minimax, ZAI } from "@lobehub/icons";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { EllipsisVerticalIcon, PencilLineIcon, PlusIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
 import { GLMDialog } from "@/components/GLMBanner";
 import { KimiDialog } from "@/components/KimiDialog";
 import { MiniMaxDialog } from "@/components/MiniMaxDialog";
@@ -16,10 +18,154 @@ import {
 import { cn } from "@/lib/utils";
 import {
 	useCreateConfig,
+	useDeleteConfig,
 	useResetToOriginalConfig,
 	useSetCurrentConfig,
 	useStores,
+	type ConfigStore,
 } from "../lib/query";
+
+interface ConfigCardProps {
+	store: ConfigStore;
+	isCurrentStore: boolean;
+	onStoreClick: (storeId: string, isCurrentStore: boolean) => void;
+	onEditClick: (storeId: string) => void;
+	onDeleteClick: (storeId: string, storeTitle: string) => void;
+}
+
+function ConfigCard({ store, isCurrentStore, onStoreClick, onEditClick, onDeleteClick }: ConfigCardProps) {
+	const { t } = useTranslation();
+	const [contextMenuOpen, setContextMenuOpen] = useState(false);
+	const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+	const menuIdRef = React.useRef(`menu-${store.id}`);
+
+	const handleContextMenu = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		// Close all context menus first
+		const closeEvent = new CustomEvent('closeAllContextMenus', {
+			detail: { source: menuIdRef.current }
+		});
+		window.dispatchEvent(closeEvent);
+
+		// Use setTimeout to ensure the close event is processed before opening new menu
+		setTimeout(() => {
+			setContextMenuPosition({ x: e.clientX, y: e.clientY });
+			setContextMenuOpen(true);
+		}, 0);
+	};
+
+	const closeMenu = () => {
+		setContextMenuOpen(false);
+	};
+
+	// Listen for global close event
+	useEffect(() => {
+		const handleCloseEvent = (event: any) => {
+			// Don't close if the event is from this same menu (to allow reopening on the same spot)
+			if (event.detail?.source !== menuIdRef.current) {
+				setContextMenuOpen(false);
+			}
+		};
+
+		const handleClick = () => {
+			setContextMenuOpen(false);
+		};
+
+		window.addEventListener('closeAllContextMenus', handleCloseEvent);
+		window.addEventListener('click', handleClick);
+
+		return () => {
+			window.removeEventListener('closeAllContextMenus', handleCloseEvent);
+			window.removeEventListener('click', handleClick);
+		};
+	}, []);
+
+	return (
+		<>
+			<div
+				role="button"
+				onClick={() => onStoreClick(store.id, isCurrentStore)}
+				onContextMenu={handleContextMenu}
+				className={cn(
+					"border rounded-xl p-3 h-[100px] flex flex-col justify-between transition-colors disabled:opacity-50 cursor-pointer relative",
+					{
+						"bg-primary/10 border-primary border-2": isCurrentStore,
+					},
+				)}
+			>
+				<div>
+					<div>{store.title}</div>
+					{store.settings.env?.ANTHROPIC_BASE_URL && (
+						<div
+							className="text-xs text-muted-foreground mt-1 truncate"
+							title={store.settings.env.ANTHROPIC_BASE_URL}
+						>
+							{store.settings.env.ANTHROPIC_BASE_URL}
+						</div>
+					)}
+				</div>
+
+				<div className="flex justify-end">
+					<button
+						className="hover:bg-primary/10 rounded-lg p-2 hover:text-primary"
+						onClick={(e) => {
+							e.stopPropagation();
+							onEditClick(store.id);
+						}}
+					>
+						<PencilLineIcon className="text-muted-foreground" size={14} />
+					</button>
+				</div>
+			</div>
+
+			{contextMenuOpen && (
+				<div
+					className="fixed z-50 min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+					style={{
+						left: contextMenuPosition.x,
+						top: contextMenuPosition.y,
+					}}
+					onClick={(e) => e.stopPropagation()} // Prevent clicks inside menu from bubbling up
+				>
+					<button
+						className={`relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${
+							isCurrentStore ? 'opacity-50 cursor-not-allowed' : ''
+						}`}
+						onClick={() => {
+							if (!isCurrentStore) {
+								onStoreClick(store.id, isCurrentStore);
+							}
+							closeMenu();
+						}}
+						disabled={isCurrentStore}
+					>
+						{t("contextMenu.apply")}
+					</button>
+					<button
+						className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+						onClick={() => {
+							onEditClick(store.id);
+							closeMenu();
+						}}
+					>
+						{t("contextMenu.edit")}
+					</button>
+					<button
+						className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground text-destructive focus:text-destructive"
+						onClick={() => {
+							onDeleteClick(store.id, store.title);
+							closeMenu();
+						}}
+					>
+						{t("contextMenu.delete")}
+					</button>
+				</div>
+			)}
+		</>
+	);
+}
 
 export function ConfigSwitcherPage() {
 	return (
@@ -36,6 +182,7 @@ function ConfigStores() {
 	const { data: stores } = useStores();
 	const setCurrentStoreMutation = useSetCurrentConfig();
 	const resetToOriginalMutation = useResetToOriginalConfig();
+	const deleteStoreMutation = useDeleteConfig();
 	const navigate = useNavigate();
 
 	const isOriginalConfigActive = !stores.some((store) => store.using);
@@ -60,6 +207,19 @@ function ConfigStores() {
 			settings: {},
 		});
 		navigate(`/edit/${store.id}`);
+	};
+
+	const handleDeleteConfig = async (storeId: string, storeTitle: string) => {
+		const confirmed = await ask(
+			t("configEditor.deleteConfirm", { name: storeTitle }),
+			{ title: t("configEditor.deleteTitle"), kind: "warning" },
+		);
+
+		if (confirmed) {
+			await deleteStoreMutation.mutateAsync({
+				storeId,
+			});
+		}
 	};
 
 	if (stores.length === 0) {
@@ -210,41 +370,14 @@ function ConfigStores() {
 				{stores.map((store) => {
 					const isCurrentStore = store.using;
 					return (
-						<div
-							role="button"
+						<ConfigCard
 							key={store.id}
-							onClick={() => handleStoreClick(store.id, isCurrentStore)}
-							className={cn(
-								"border rounded-xl p-3 h-[100px] flex flex-col justify-between transition-colors disabled:opacity-50",
-								{
-									"bg-primary/10 border-primary border-2": isCurrentStore,
-								},
-							)}
-						>
-							<div>
-								<div>{store.title}</div>
-								{store.settings.env?.ANTHROPIC_BASE_URL && (
-									<div
-										className="text-xs text-muted-foreground mt-1 truncate "
-										title={store.settings.env.ANTHROPIC_BASE_URL}
-									>
-										{store.settings.env.ANTHROPIC_BASE_URL}
-									</div>
-								)}
-							</div>
-
-							<div className="flex justify-end">
-								<button
-									className="hover:bg-primary/10 rounded-lg p-2 hover:text-primary"
-									onClick={(e) => {
-										e.stopPropagation();
-										navigate(`/edit/${store.id}`);
-									}}
-								>
-									<PencilLineIcon className="text-muted-foreground" size={14} />
-								</button>
-							</div>
-						</div>
+							store={store}
+							isCurrentStore={isCurrentStore}
+							onStoreClick={handleStoreClick}
+							onEditClick={(storeId) => navigate(`/edit/${storeId}`)}
+							onDeleteClick={handleDeleteConfig}
+						/>
 					);
 				})}
 			</div>
