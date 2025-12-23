@@ -36,7 +36,15 @@
       "Bash(gh repo create:*)",
       "Bash(git push:*)",
       "Bash(gh issue view:*)",
-      "Bash(gh:*)"
+      "Bash(gh:*)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx typescript:*)",
+      "Bash(pnpm run build:*)",
+      "Bash(pnpm tauri dev:*)",
+      "WebSearch",
+      "Bash(cargo check:*)",
+      "Bash(cargo update:*)"
     ],
     "deny": [],
     "ask": []
