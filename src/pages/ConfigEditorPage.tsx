@@ -638,9 +638,9 @@ export function ConfigEditorPage() {
 				"env.ANTHROPIC_BASE_URL",
 				"https://open.bigmodel.cn/api/anthropic",
 			);
-			setValue("env.ANTHROPIC_MODEL", "GLM-4.6");
-			setValue("env.ANTHROPIC_DEFAULT_OPUS_MODEL", "GLM-4.6");
-			setValue("env.ANTHROPIC_DEFAULT_SONNET_MODEL", "GLM-4.6");
+			setValue("env.ANTHROPIC_MODEL", "GLM-4.7");
+			setValue("env.ANTHROPIC_DEFAULT_OPUS_MODEL", "GLM-4.7");
+			setValue("env.ANTHROPIC_DEFAULT_SONNET_MODEL", "GLM-4.7");
 			setValue("env.ANTHROPIC_DEFAULT_HAIKU_MODEL", "GLM-4.5-Air");
 		} else if (preset === "kimi") {
 			setValue("env.ANTHROPIC_BASE_URL", "https://api.moonshot.cn/anthropic");
@@ -650,9 +650,9 @@ export function ConfigEditorPage() {
 			setValue("env.ANTHROPIC_DEFAULT_HAIKU_MODEL", "kimi-k2-turbo-preview");
 		} else if (preset === "z.ai") {
 			setValue("env.ANTHROPIC_BASE_URL", "https://api.z.ai/api/anthropic");
-			setValue("env.ANTHROPIC_MODEL", "glm-4.6");
-			setValue("env.ANTHROPIC_DEFAULT_OPUS_MODEL", "glm-4.6");
-			setValue("env.ANTHROPIC_DEFAULT_SONNET_MODEL", "glm-4.6");
+			setValue("env.ANTHROPIC_MODEL", "glm-4.7");
+			setValue("env.ANTHROPIC_DEFAULT_OPUS_MODEL", "glm-4.7");
+			setValue("env.ANTHROPIC_DEFAULT_SONNET_MODEL", "glm-4.7");
 			setValue("env.ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4.5-Air");
 		}
 

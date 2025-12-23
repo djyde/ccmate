@@ -44,9 +44,9 @@ export function GLMDialog(props: {
 					env: {
 						ANTHROPIC_AUTH_TOKEN: apiKey.trim(),
 						ANTHROPIC_BASE_URL: baseUrl,
-						ANTHROPIC_MODEL: "GLM-4.6",
-						ANTHROPIC_DEFAULT_OPUS_MODEL: "GLM-4.6",
-						ANTHROPIC_DEFAULT_SONNET_MODEL: "GLM-4.6",
+						ANTHROPIC_MODEL: "GLM-4.7",
+						ANTHROPIC_DEFAULT_OPUS_MODEL: "GLM-4.7",
+						ANTHROPIC_DEFAULT_SONNET_MODEL: "GLM-4.7",
 						ANTHROPIC_DEFAULT_HAIKU_MODEL: "GLM-4.5-Air",
 					},
 				},
