@@ -206,6 +206,12 @@ pub fn run() {
             read_claude_agents,
             write_claude_agent,
             delete_claude_agent,
+            read_claude_skills,
+            write_claude_skill,
+            delete_claude_skill,
+            read_claude_plugins,
+            write_claude_plugin,
+            delete_claude_plugin,
             generate_env_vars,
             copy_to_clipboard
         ])

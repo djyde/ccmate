@@ -13,6 +13,8 @@ import { Detail } from "./pages/projects/Detail";
 import { ProjectsLayout } from "./pages/projects/Layout";
 import { List } from "./pages/projects/List";
 import { SettingsPage } from "./pages/SettingsPage";
+import { SkillsPage } from "./pages/SkillsPage";
+import { PluginsPage } from "./pages/PluginsPage";
 import { UsagePage } from "./pages/UsagePage";
 
 const router = createBrowserRouter([
@@ -61,6 +63,22 @@ const router = createBrowserRouter([
 				element: (
 					<RouteWrapper>
 						<AgentsPage />
+					</RouteWrapper>
+				),
+			},
+			{
+				path: "skills",
+				element: (
+					<RouteWrapper>
+						<SkillsPage />
+					</RouteWrapper>
+				),
+			},
+			{
+				path: "plugins",
+				element: (
+					<RouteWrapper>
+						<PluginsPage />
 					</RouteWrapper>
 				),
 			},

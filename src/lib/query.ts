@@ -616,6 +616,122 @@ export const useDeleteClaudeAgent = () => {
 	});
 };
 
+// Skill management interfaces
+export interface SkillFile {
+	name: string;
+	path: string;
+	content: string;
+	exists: boolean;
+	file_type: string; // "file" or "folder"
+	children?: SkillFile[];
+}
+
+// Skill management hooks
+export const useClaudeSkills = () =>
+	useQuery({
+		queryKey: ["claude-skills"],
+		queryFn: () => invoke<SkillFile[]>("read_claude_skills"),
+	});
+
+export const useWriteClaudeSkill = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			skillPath,
+			content,
+		}: {
+			skillPath: string;
+			content: string;
+		}) => invoke<void>("write_claude_skill", { skillPath, content }),
+		onSuccess: () => {
+			toast.success("Skill saved successfully");
+			queryClient.invalidateQueries({ queryKey: ["claude-skills"] });
+		},
+		onError: (error) => {
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			toast.error(`Failed to save skill: ${errorMessage}`);
+		},
+	});
+};
+
+export const useDeleteClaudeSkill = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (skillPath: string) =>
+			invoke<void>("delete_claude_skill", { skillPath }),
+		onSuccess: () => {
+			toast.success("Skill deleted successfully");
+			queryClient.invalidateQueries({ queryKey: ["claude-skills"] });
+		},
+		onError: (error) => {
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			toast.error(`Failed to delete skill: ${errorMessage}`);
+		},
+	});
+};
+
+// Plugin management interfaces
+export interface PluginFile {
+	name: string;
+	path: string;
+	content: string;
+	exists: boolean;
+	file_type: string;
+	children?: PluginFile[];
+}
+
+// Plugin management hooks
+export const useClaudePlugins = () =>
+	useQuery({
+		queryKey: ["claude-plugins"],
+		queryFn: () => invoke<PluginFile[]>("read_claude_plugins"),
+	});
+
+export const useWriteClaudePlugin = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			pluginName,
+			content,
+		}: {
+			pluginName: string;
+			content: string;
+		}) => invoke<void>("write_claude_plugin", { pluginName, content }),
+		onSuccess: () => {
+			toast.success("Plugin saved successfully");
+			queryClient.invalidateQueries({ queryKey: ["claude-plugins"] });
+		},
+		onError: (error) => {
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			toast.error(`Failed to save plugin: ${errorMessage}`);
+		},
+	});
+};
+
+export const useDeleteClaudePlugin = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: (pluginName: string) =>
+			invoke<void>("delete_claude_plugin", { pluginName }),
+		onSuccess: () => {
+			toast.success("Plugin deleted successfully");
+			queryClient.invalidateQueries({ queryKey: ["claude-plugins"] });
+		},
+		onError: (error) => {
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			toast.error(`Failed to delete plugin: ${errorMessage}`);
+		},
+	});
+};
+
 // Helper function to rebuild tray menu
 const rebuildTrayMenu = async () => {
 	try {

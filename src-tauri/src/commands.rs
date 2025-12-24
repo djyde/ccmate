@@ -2122,3 +2122,279 @@ pub async fn copy_to_clipboard(text: String) -> Result<(), String> {
 
     Ok(())
 }
+
+// ============================================================================
+// Skills Management
+// ============================================================================
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct SkillFile {
+    pub name: String,
+    pub path: String,
+    pub content: String,
+    pub exists: bool,
+    pub file_type: String, // "file" or "folder"
+    pub children: Option<Vec<SkillFile>>,
+}
+
+/// Recursively read skills directory and build tree structure
+fn read_skills_recursive(dir: &std::path::Path, base_path: &std::path::Path) -> Result<Vec<SkillFile>, String> {
+    let mut items = Vec::new();
+
+    if !dir.exists() {
+        return Ok(items);
+    }
+
+    let entries = std::fs::read_dir(dir)
+        .map_err(|e| format!("Failed to read skills directory {}: {}", dir.display(), e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+        let name = path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        // Skip .git directory
+        if name == ".git" {
+            continue;
+        }
+
+        if path.is_dir() {
+            // Recursively read subdirectory
+            let children = read_skills_recursive(&path, base_path)?;
+            let relative_path = path.strip_prefix(base_path)
+                .map_err(|e| format!("Failed to get relative path: {}", e))?
+                .to_string_lossy()
+                .to_string();
+
+            items.push(SkillFile {
+                name: name.clone(),
+                path: relative_path,
+                content: String::new(),
+                exists: true,
+                file_type: "folder".to_string(),
+                children: Some(children),
+            });
+        } else if path.is_file() {
+            // Read all files (not just .md)
+            let content = std::fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read skill file {}: {}", path.display(), e))?;
+
+            let file_name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+
+            let relative_path = path.strip_prefix(base_path)
+                .map_err(|e| format!("Failed to get relative path: {}", e))?
+                .to_string_lossy()
+                .to_string();
+
+            items.push(SkillFile {
+                name: file_name,
+                path: relative_path,
+                content,
+                exists: true,
+                file_type: "file".to_string(),
+                children: None,
+            });
+        }
+    }
+
+    // Sort items: folders first, then files, both alphabetically
+    items.sort_by(|a, b| {
+        match (a.file_type.as_str(), b.file_type.as_str()) {
+            ("folder", "file") => std::cmp::Ordering::Less,
+            ("file", "folder") => std::cmp::Ordering::Greater,
+            _ => a.name.cmp(&b.name),
+        }
+    });
+
+    Ok(items)
+}
+
+#[tauri::command]
+pub async fn read_claude_skills() -> Result<Vec<SkillFile>, String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let skills_dir = home_dir.join(".claude/skills");
+
+    if !skills_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    read_skills_recursive(&skills_dir, &skills_dir)
+}
+
+#[tauri::command]
+pub async fn write_claude_skill(skill_path: String, content: String) -> Result<(), String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let skills_dir = home_dir.join(".claude/skills");
+    let skill_file_path = skills_dir.join(&skill_path);
+
+    // Ensure parent directories exist
+    if let Some(parent) = skill_file_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create skills directory: {}", e))?;
+    }
+
+    std::fs::write(&skill_file_path, content)
+        .map_err(|e| format!("Failed to write skill file: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_claude_skill(skill_path: String) -> Result<(), String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let skills_dir = home_dir.join(".claude/skills");
+    let skill_file_path = skills_dir.join(&skill_path);
+
+    if skill_file_path.exists() {
+        std::fs::remove_file(&skill_file_path)
+            .map_err(|e| format!("Failed to delete skill file: {}", e))?;
+    }
+
+    Ok(())
+}
+
+// ============================================================================
+// Plugins Management
+// ============================================================================
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct PluginFile {
+    pub name: String,
+    pub path: String,
+    pub content: String,
+    pub exists: bool,
+    pub file_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub children: Option<Vec<PluginFile>>,
+}
+
+#[tauri::command]
+pub async fn read_claude_plugins() -> Result<Vec<PluginFile>, String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let plugins_dir = home_dir.join(".claude/plugins");
+
+    if !plugins_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    read_plugins_recursive(&plugins_dir, &plugins_dir)
+}
+
+// Recursive function to read plugins directory
+fn read_plugins_recursive(dir: &std::path::Path, base_path: &std::path::Path) -> Result<Vec<PluginFile>, String> {
+    let mut items = Vec::new();
+
+    if !dir.exists() {
+        return Ok(items);
+    }
+
+    let entries = std::fs::read_dir(dir)
+        .map_err(|e| format!("Failed to read plugins directory {}: {}", dir.display(), e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+        let name = path.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        // Skip .git directory
+        if name == ".git" {
+            continue;
+        }
+
+        if path.is_dir() {
+            // Recursively read subdirectory
+            let children = read_plugins_recursive(&path, base_path)?;
+
+            if !children.is_empty() {
+                let relative_path = path.strip_prefix(base_path)
+                    .map_err(|e| format!("Failed to get relative path: {}", e))?
+                    .to_string_lossy()
+                    .to_string();
+
+                items.push(PluginFile {
+                    name: name.clone(),
+                    path: relative_path,
+                    content: String::new(),
+                    exists: true,
+                    file_type: "folder".to_string(),
+                    children: Some(children),
+                });
+            }
+        } else if path.is_file() {
+            // Read all file types
+            let content = std::fs::read_to_string(&path)
+                .map_err(|e| format!("Failed to read plugin file {}: {}", path.display(), e))?;
+
+            let file_name = path.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+
+            let relative_path = path.strip_prefix(base_path)
+                .map_err(|e| format!("Failed to get relative path: {}", e))?
+                .to_string_lossy()
+                .to_string();
+
+            items.push(PluginFile {
+                name: file_name,
+                path: relative_path,
+                content,
+                exists: true,
+                file_type: "file".to_string(),
+                children: None,
+            });
+        }
+    }
+
+    // Sort items: folders first, then files, alphabetically
+    items.sort_by(|a, b| {
+        if a.file_type == b.file_type {
+            a.name.cmp(&b.name)
+        } else if a.file_type == "folder" {
+            std::cmp::Ordering::Less
+        } else {
+            std::cmp::Ordering::Greater
+        }
+    });
+
+    Ok(items)
+}
+
+#[tauri::command]
+pub async fn write_claude_plugin(plugin_name: String, content: String) -> Result<(), String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let plugins_dir = home_dir.join(".claude/plugins");
+    let plugin_file_path = plugins_dir.join(&plugin_name);
+
+    // Ensure .claude/plugins directory exists
+    std::fs::create_dir_all(&plugins_dir)
+        .map_err(|e| format!("Failed to create .claude/plugins directory: {}", e))?;
+
+    std::fs::write(&plugin_file_path, content)
+        .map_err(|e| format!("Failed to write plugin file: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_claude_plugin(plugin_name: String) -> Result<(), String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let plugins_dir = home_dir.join(".claude/plugins");
+    let plugin_file_path = plugins_dir.join(&plugin_name);
+
+    if plugin_file_path.exists() {
+        std::fs::remove_file(&plugin_file_path)
+            .map_err(|e| format!("Failed to delete plugin file: {}", e))?;
+    }
+
+    Ok(())
+}

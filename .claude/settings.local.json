@@ -44,7 +44,8 @@
       "Bash(pnpm tauri dev:*)",
       "WebSearch",
       "Bash(cargo check:*)",
-      "Bash(cargo update:*)"
+      "Bash(cargo update:*)",
+      "Bash(pnpm add:*)"
     ],
     "deny": [],
     "ask": []

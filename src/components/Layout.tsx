@@ -6,7 +6,9 @@ import {
 	CpuIcon,
 	FileJsonIcon,
 	FolderIcon,
+	PuzzleIcon,
 	SettingsIcon,
+	SparklesIcon,
 	TerminalIcon,
 } from "lucide-react";
 import type React from "react";
@@ -41,6 +43,16 @@ export function Layout() {
 			to: "/agents",
 			icon: BotIcon,
 			label: "Agents",
+		},
+		{
+			to: "/skills",
+			icon: SparklesIcon,
+			label: "Skills",
+		},
+		{
+			to: "/plugins",
+			icon: PuzzleIcon,
+			label: "Plugins",
 		},
 		{
 			to: "/memory",
