@@ -1743,6 +1743,44 @@ pub async fn update_claude_code_hook() -> Result<(), String> {
     Ok(())
 }
 
+/// Check if ccmate hooks exist in Claude Code settings
+pub fn check_claude_code_hooks_exist() -> Result<bool, String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let settings_path = home_dir.join(".claude/settings.json");
+
+    if !settings_path.exists() {
+        return Ok(false);
+    }
+
+    let content = std::fs::read_to_string(&settings_path)
+        .map_err(|e| format!("Failed to read settings.json: {}", e))?;
+
+    let settings: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse settings.json: {}", e))?;
+
+    // Check if hooks object exists and contains ccmate hooks
+    if let Some(hooks_obj) = settings.get("hooks").and_then(|h| h.as_object()) {
+        let events = ["Notification", "Stop", "PreToolUse"];
+
+        // Check if at least one ccmate hook exists
+        for event in events {
+            if let Some(event_hooks) = hooks_obj.get(event).and_then(|h| h.as_array()) {
+                for entry in event_hooks {
+                    if let Some(hooks_array) = entry.get("hooks").and_then(|h| h.as_array()) {
+                        for hook in hooks_array {
+                            if hook.get("__ccmate__").is_some() {
+                                return Ok(true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(false)
+}
+
 #[tauri::command]
 pub async fn add_claude_code_hook() -> Result<(), String> {
     let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
