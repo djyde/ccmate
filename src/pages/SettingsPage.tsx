@@ -141,7 +141,7 @@ export function SettingsPage() {
 					<div className="flex items-center gap-2">
 						<Button
 							onClick={(_) => {
-								openUrl("https://github.com/djyde/ccmate-release/issues");
+								openUrl("https://github.com/djyde/ccmate/issues");
 							}}
 							variant="outline"
 							size="sm"
