@@ -41,6 +41,7 @@ export interface ConfigStore {
 
 export interface McpServer {
 	config: Record<string, any>;
+	enabledGlobally: boolean;
 }
 
 export interface NotificationSettings {
@@ -312,6 +313,37 @@ export const useGlobalMcpServers = () => {
 	return useSuspenseQuery({
 		queryKey: ["global-mcp-servers"],
 		queryFn: () => invoke<Record<string, McpServer>>("get_global_mcp_servers"),
+	});
+};
+
+export const useSetGlobalMcpServerEnabled = () => {
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: ({
+			serverName,
+			enabledGlobally,
+		}: {
+			serverName: string;
+			enabledGlobally: boolean;
+		}) =>
+			invoke<void>("set_global_mcp_server_enabled", {
+				serverName,
+				enabled: enabledGlobally,
+			}),
+		onSuccess: (_, variables) => {
+			toast.success(
+				variables.enabledGlobally
+					? "MCP server enabled globally"
+					: "MCP server disabled globally",
+			);
+			queryClient.invalidateQueries({ queryKey: ["global-mcp-servers"] });
+		},
+		onError: (error) => {
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			toast.error(`Failed to update MCP server: ${errorMessage}`);
+		},
 	});
 };
 
