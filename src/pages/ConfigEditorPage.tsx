@@ -454,6 +454,13 @@ const createFields = (t: (key: string) => string): SectionConfig[] => [
 				description: "Model configuration for subagents",
 			},
 			{
+				label: "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+				name: "env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS",
+				type: "text",
+				description: "Set to \"1\" to enable experimental multi-agent team orchestration (Opus 4.6+)",
+				placeholder: "1",
+			},
+			{
 				label: "CLAUDE_CODE_USE_BEDROCK",
 				name: "env.CLAUDE_CODE_USE_BEDROCK",
 				type: "boolean",
