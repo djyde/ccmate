@@ -1,14 +1,8 @@
 import dayjs from 'dayjs';
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AreaChart } from "@/components/ui/area-chart";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select, SegmentedControl, Text, UnstyledButton } from "@mantine/core";
+import { AreaChart } from "@mantine/charts";
 import type { ProjectUsageRecord } from "@/lib/query";
 import { formatLargeNumber } from "@/lib/utils";
 
@@ -24,8 +18,8 @@ export function TokenUsageChart({
 	onFilteredDataChange,
 }: TokenUsageChartProps) {
 	const { t } = useTranslation();
-	const [selectedModel, setSelectedModel] = useState<string>("all");
-	const [timeRange, setTimeRange] = useState<TimeRange>("5h");
+	const [selectedModel, setSelectedModel] = useState<string | null>("all");
+	const [timeRange, setTimeRange] = useState<string>("5h");
 	const [activeCategories, setActiveCategories] = useState<string[]>([
 		"Input Tokens",
 		"Output Tokens",
@@ -47,7 +41,7 @@ export function TokenUsageChart({
 		let filtered = data;
 
 		// Filter by model
-		if (selectedModel !== "all") {
+		if (selectedModel && selectedModel !== "all") {
 			filtered = filtered.filter((record) => record.model === selectedModel);
 		}
 
@@ -55,7 +49,7 @@ export function TokenUsageChart({
 		const now = dayjs();
 		let startTime: dayjs.Dayjs;
 
-		switch (timeRange) {
+		switch (timeRange as TimeRange) {
 			case "5h":
 				startTime = now.subtract(5, 'hour');
 				break;
@@ -102,23 +96,16 @@ export function TokenUsageChart({
 		}
 	}, [filteredData, onFilteredDataChange]);
 
-	// Handle category toggling
-	const handleCategoryToggle = (value: any) => {
-		if (value && value.categoryClicked) {
-			setActiveCategories((prev) => {
-				if (prev.includes(value.categoryClicked)) {
-					return prev.filter((cat) => cat !== value.categoryClicked);
-				} else {
-					return [...prev, value.categoryClicked];
-				}
-			});
-		}
+	// Toggle category function
+	const toggleCategory = (category: string) => {
+		setActiveCategories((prev) => {
+			if (prev.includes(category)) {
+				return prev.filter((cat) => cat !== category);
+			}
+			return [...prev, category];
+		});
 	};
 
-	// Toggle category function for direct use
-	const toggleCategory = (category: string) => {
-		handleCategoryToggle({ categoryClicked: category });
-	};
 	// Group data based on time range
 	const groupDataByInterval = (records: ProjectUsageRecord[]) => {
 		const intervals: {
@@ -289,111 +276,89 @@ export function TokenUsageChart({
 
 	if (!data || data.length === 0) {
 		return (
-			<div className="h-96 flex items-center justify-center border rounded-lg bg-muted/20">
-				<p className="text-muted-foreground">{t("usageChart.noData")}</p>
+			<div className="h-96 flex items-center justify-center">
+				<Text c="dimmed">{t("usageChart.noData")}</Text>
 			</div>
 		);
 	}
 
+	const timeRangeData = [
+		{ label: t("usageChart.last5Hours"), value: "5h" },
+		{ label: t("usageChart.startOfToday"), value: "today" },
+		{ label: t("usageChart.last7Days"), value: "7d" },
+		{ label: t("usageChart.startOfWeek"), value: "week" },
+		{ label: t("usageChart.startOfMonth"), value: "month" },
+		{ label: t("usageChart.allTime"), value: "all" },
+	];
+
+	const modelData = [
+		{ label: t("usageChart.allModels"), value: "all" },
+		...availableModels.map((model) => ({ label: model, value: model })),
+	];
+
 	return (
 		<div className="space-y-4 w-full min-w-0">
 			{/* Filter Controls */}
-			<div className="flex gap-4 items-center flex-wrap pb-5">
-				<div className="flex items-center gap-2">
-					<label htmlFor="model-filter" className="text-sm font-medium">
-						{t("usageChart.modelFilter")}
-					</label>
-					<Select value={selectedModel} onValueChange={setSelectedModel}>
-						<SelectTrigger id="model-filter" className="w-48">
-							<SelectValue placeholder={t("usageChart.allModels")} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">{t("usageChart.allModels")}</SelectItem>
-							{availableModels.map((model) => (
-								<SelectItem key={model} value={model}>
-									{model}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
+			<div className="flex gap-4 items-center flex-wrap">
+				<SegmentedControl
+					value={timeRange}
+					onChange={(value) => setTimeRange(value)}
+					data={timeRangeData}
+					size="xs"
+				/>
 
-				<div className="flex items-center gap-2">
-					<label htmlFor="time-range" className="text-sm font-medium">
-						{t("usageChart.timeRange")}
-					</label>
-					<Select
-						value={timeRange}
-						onValueChange={(value: TimeRange) => setTimeRange(value)}
-					>
-						<SelectTrigger id="time-range" className="w-48">
-							<SelectValue placeholder={t("usageChart.selectTimeRange")} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="5h">{t("usageChart.last5Hours")}</SelectItem>
-							<SelectItem value="today">
-								{t("usageChart.startOfToday")}
-							</SelectItem>
-							<SelectItem value="7d">{t("usageChart.last7Days")}</SelectItem>
-							<SelectItem value="week">
-								{t("usageChart.startOfWeek")}
-							</SelectItem>
-							<SelectItem value="month">
-								{t("usageChart.startOfMonth")}
-							</SelectItem>
-							<SelectItem value="all">{t("usageChart.allTime")}</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
+				<Select
+					value={selectedModel}
+					onChange={setSelectedModel}
+					data={modelData}
+					size="xs"
+					w={200}
+					allowDeselect={false}
+				/>
 			</div>
 
 			{/* Custom Legend */}
 			<div className="flex gap-6 items-center justify-center pb-4">
 				{[
-					{ key: "Input Tokens", label: t("usage.inputTokens") },
-					{ key: "Output Tokens", label: t("usage.outputTokens") },
-					{ key: "Cache Read Tokens", label: t("usage.cacheReadTokens") },
-				].map(({ key, label }) => {
+					{ key: "Input Tokens", label: t("usage.inputTokens"), color: "var(--mantine-color-blue-5)" },
+					{ key: "Output Tokens", label: t("usage.outputTokens"), color: "var(--mantine-color-green-5)" },
+					{ key: "Cache Read Tokens", label: t("usage.cacheReadTokens"), color: "var(--mantine-color-yellow-5)" },
+				].map(({ key, label, color }) => {
 					const isActive = activeCategories.includes(key);
-					const color =
-						key === "Input Tokens"
-							? "bg-blue-500"
-							: key === "Output Tokens"
-								? "bg-emerald-500"
-								: "bg-amber-500";
 					return (
-						<button
+						<UnstyledButton
 							key={key}
 							onClick={() => toggleCategory(key)}
-							className={`flex items-center gap-2 px-3 py-1 rounded-md text-sm transition-all ${
-								isActive
-									? "opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800"
-									: "opacity-40 hover:opacity-60"
-							}`}
+							className="flex items-center gap-2 px-3 py-1 rounded-md"
+							style={{
+								opacity: isActive ? 1 : 0.4,
+								transition: "opacity 0.15s ease",
+							}}
 						>
-							<span className={`w-3 h-3 rounded-full ${color}`} />
-							<span className="text-gray-700 dark:text-gray-300">{label}</span>
-						</button>
+							<span
+								className="w-3 h-3 rounded-full"
+								style={{ backgroundColor: color }}
+							/>
+							<Text size="sm" c="dimmed">{label}</Text>
+						</UnstyledButton>
 					);
 				})}
 			</div>
 
 			{/* Chart */}
-			<div className="h-[320px] w-full min-w-0">
+			<div className="h-[320px] w-full min-w-0 overflow-hidden">
 				<AreaChart
+					h="100%"
 					data={chartData}
-					index="time"
-					categories={activeCategories}
-					colors={activeCategories.map((cat) => {
-						if (cat === "Input Tokens") return "blue";
-						if (cat === "Output Tokens") return "emerald";
-						if (cat === "Cache Read Tokens") return "amber";
-						return "blue";
-					})}
+					dataKey="time"
+					series={activeCategories.map((cat) => ({
+						name: cat,
+						color: cat === "Input Tokens" ? "blue.6" : cat === "Output Tokens" ? "green.6" : "yellow.6",
+					}))}
 					valueFormatter={formatLargeNumber}
-					fill="gradient"
-					className="h-full"
-					showLegend={false}
+					withGradient
+					curveType="monotone"
+					withLegend={false}
 				/>
 			</div>
 		</div>

@@ -1,7 +1,7 @@
-import { RefreshCcwIcon, RotateCwIcon } from "lucide-react";
+import { RefreshCcwIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@mantine/core";
 import { useCheckForUpdates, useInstallAndRestart } from "../lib/query";
-import { cn } from "../lib/utils";
 
 export function UpdateButton() {
 	const { t } = useTranslation();
@@ -18,30 +18,23 @@ export function UpdateButton() {
 
 	return (
 		<div className="px-3 py-2">
-			<div className="space-y-2">
-				<button
-					onClick={() => installAndRestart.mutate()}
-					disabled={installAndRestart.isPending}
-					className={cn(
-						"flex items-center justify-center text-sm gap-2 bg-secondary hover:bg-secondary/80 rounded-md px-2 py-2 w-full",
-						{
-							"opacity-50": installAndRestart.isPending,
-						},
-					)}
-				>
-					{installAndRestart.isPending ? (
-						<>
-							<RotateCwIcon className="mr-2 h-4 w-4 animate-spin" />
-							{t("updateButton.installing")}
-						</>
-					) : (
-						<>
-							<RefreshCcwIcon className="h-4 w-4" />
-							{t("updateButton.newVersionAvailable")}
-						</>
-					)}
-				</button>
-			</div>
+			<Button
+				onClick={() => installAndRestart.mutate()}
+				disabled={installAndRestart.isPending}
+				loading={installAndRestart.isPending}
+				variant="default"
+				size="sm"
+				fullWidth
+				leftSection={
+					installAndRestart.isPending ? undefined : (
+						<RefreshCcwIcon className="h-4 w-4" />
+					)
+				}
+			>
+				{installAndRestart.isPending
+					? t("updateButton.installing")
+					: t("updateButton.newVersionAvailable")}
+			</Button>
 		</div>
 	);
 }

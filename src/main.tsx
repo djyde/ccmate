@@ -4,12 +4,13 @@ import {
 	createTheme,
 } from "@mantine/core";
 import "@mantine/core/styles.css";
+import "@mantine/charts/styles.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { ThemeProvider } from "./components/theme-provider";
-import { Toaster } from "./components/ui/sonner";
+import { Notifications } from "@mantine/notifications";
+import "@mantine/notifications/styles.css";
 import { Router } from "./router";
 import "./i18n";
 import "./tw.css";
@@ -73,20 +74,13 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
 	<React.StrictMode>
 		<ErrorBoundary>
 			<QueryClientProvider client={queryClient}>
-				<ThemeProvider
-					attribute="class"
-					defaultTheme="system"
-					enableSystem
-					disableTransitionOnChange
+				<MantineProvider
+					theme={mantineTheme}
+					defaultColorScheme="auto"
 				>
-					<MantineProvider
-						theme={mantineTheme}
-						defaultColorScheme="auto"
-					>
-						<Router />
-						<Toaster />
-					</MantineProvider>
-				</ThemeProvider>
+					<Router />
+					<Notifications position="bottom-right" autoClose={3000} />
+				</MantineProvider>
 			</QueryClientProvider>
 		</ErrorBoundary>
 	</React.StrictMode>,

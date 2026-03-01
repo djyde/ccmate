@@ -1,12 +1,11 @@
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { yamlFrontmatter } from "@codemirror/lang-yaml";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
+import { Button, Skeleton } from "@mantine/core";
 import { SaveIcon } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useClaudeMemory, useWriteClaudeMemory } from "@/lib/query";
 import { useCodeMirrorTheme } from "@/lib/use-codemirror-theme";
 
@@ -14,7 +13,8 @@ function MemoryPageSkeleton() {
 	return (
 		<div className="flex flex-col h-screen">
 			<div
-				className="sticky top-0 z-10 bg-background/80 backdrop-blur-md"
+				className="sticky top-0"
+				style={{ backgroundColor: "var(--mantine-color-body)", zIndex: "var(--mantine-z-index-app)" as unknown as number }}
 				data-tauri-drag-region
 			>
 				<div
@@ -22,21 +22,21 @@ function MemoryPageSkeleton() {
 					data-tauri-drag-region
 				>
 					<div data-tauri-drag-region>
-						<Skeleton className="h-6 w-16 mb-2" />
-						<Skeleton className="h-4 w-64" />
+						<Skeleton height={24} width={64} mb={8} />
+						<Skeleton height={16} width={256} />
 					</div>
-					<Skeleton className="h-8 w-16" />
+					<Skeleton height={32} width={64} />
 				</div>
 			</div>
 			<div className="flex-1 px-5 pb-5 overflow-hidden">
-				<div className="rounded-lg overflow-hidden border h-full">
+				<div className="rounded-lg overflow-hidden h-full" style={{ border: "1px solid var(--mantine-color-default-border)" }}>
 					<div className="h-full flex items-center justify-center">
 						<div className="space-y-2 w-full max-w-2xl">
-							<Skeleton className="h-4 w-full" />
-							<Skeleton className="h-4 w-3/4" />
-							<Skeleton className="h-4 w-1/2" />
-							<Skeleton className="h-4 w-full" />
-							<Skeleton className="h-4 w-2/3" />
+							<Skeleton height={16} width="100%" />
+							<Skeleton height={16} width="75%" />
+							<Skeleton height={16} width="50%" />
+							<Skeleton height={16} width="100%" />
+							<Skeleton height={16} width="66%" />
 						</div>
 					</div>
 				</div>
@@ -87,19 +87,18 @@ function MemoryPageContent() {
 				actions={
 					<Button
 						onClick={handleSave}
-						disabled={saving}
-						variant="default"
+						loading={saving}
+						variant="filled"
 						size="sm"
-						className="flex items-center gap-2"
+						leftSection={<SaveIcon className="w-4 h-4" />}
 					>
-						<SaveIcon className="w-4 h-4" />
 						{saving ? t("memory.saving") : t("memory.save")}
 					</Button>
 				}
 			/>
 
 			<div className="flex-1 px-5 pb-5 overflow-hidden">
-				<div className="rounded-lg overflow-hidden border h-full">
+				<div className="rounded-lg overflow-hidden h-full" style={{ border: "1px solid var(--mantine-color-default-border)" }}>
 					<CodeMirror
 						value={content}
 						height="100%"

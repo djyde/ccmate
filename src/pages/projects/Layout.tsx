@@ -1,6 +1,5 @@
-import { FolderOpenIcon, Loader2 } from "lucide-react";
+import { Box, Center, Loader, Stack, Text } from "@mantine/core";
 import { Outlet } from "react-router-dom";
-import { Alert, AlertDescription } from "../../components/ui/alert";
 import { useClaudeProjects } from "../../lib/query";
 
 export function ProjectsLayout() {
@@ -8,49 +7,61 @@ export function ProjectsLayout() {
 
 	if (isLoading) {
 		return (
-			<div className="flex flex-col h-full">
-				<div className="flex items-center justify-center py-8">
-					<Loader2 className="h-6 w-6 animate-spin" />
-					<span className="ml-2 text-sm text-muted-foreground">
+			<Center h="100vh">
+				<Stack align="center" gap="sm">
+					<Loader size="sm" color="gray" />
+					<Text size="sm" c="dimmed">
 						Loading projects...
-					</span>
-				</div>
-			</div>
+					</Text>
+				</Stack>
+			</Center>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="flex flex-col h-full">
-				<Alert>
-					<AlertDescription>
-						Failed to load projects:{" "}
-						{error instanceof Error ? error.message : String(error)}
-					</AlertDescription>
-				</Alert>
-			</div>
+			<Center h="100vh">
+				<Text size="sm" c="red.6">
+					Failed to load projects:{" "}
+					{error instanceof Error ? error.message : String(error)}
+				</Text>
+			</Center>
 		);
 	}
 
 	if (!projects || projects.length === 0) {
 		return (
-			<div className="flex flex-col h-full">
-				<div className="flex flex-col items-center justify-center py-16 text-center">
-					<FolderOpenIcon className="h-12 w-12 text-muted-foreground mb-4" />
-					<h3 className="text-lg font-semibold mb-2">No Projects Found</h3>
-					<p className="text-sm text-muted-foreground max-w-md">
-						There are no Claude projects configured. Projects appear here when
-						you use Claude Code in different project folders.
-					</p>
-				</div>
-			</div>
+			<Center h="100vh">
+				<Stack align="center" gap="md" maw={360}>
+					<Box
+						style={{
+							width: 48,
+							height: 48,
+							borderRadius: 12,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+						bg="gray.1"
+						darkHidden={false}
+					>
+						<Text size="xl" c="dimmed">
+							📁
+						</Text>
+					</Box>
+					<Stack align="center" gap={4}>
+						<Text fw={500} size="md">
+							No Projects Found
+						</Text>
+						<Text size="sm" c="dimmed" ta="center" lh={1.6}>
+							Projects appear here when you use Claude Code in
+							different project folders.
+						</Text>
+					</Stack>
+				</Stack>
+			</Center>
 		);
 	}
 
-	return (
-		<div className="flex flex-col h-full">
-			{/* <ProjectSelector projects={projects} /> */}
-			<Outlet />
-		</div>
-	);
+	return <Outlet />;
 }

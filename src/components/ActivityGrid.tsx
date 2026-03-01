@@ -1,13 +1,9 @@
 import dayjs from 'dayjs';
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Tooltip, Text } from "@mantine/core";
+import { useComputedColorScheme } from "@mantine/core";
 import { type ProjectUsageRecord } from "@/lib/query";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface ActivityGridProps {
 	data: ProjectUsageRecord[];
@@ -30,6 +26,8 @@ interface ActivityLevel {
 
 export function ActivityGrid({ data }: ActivityGridProps) {
 	const { t } = useTranslation();
+	const colorScheme = useComputedColorScheme('light');
+	const isDark = colorScheme === 'dark';
 
 	// Activity utilities included in the component
 	const getActivityData = useMemo(() => {
@@ -85,7 +83,7 @@ export function ActivityGrid({ data }: ActivityGridProps) {
 		const allValues = getActivityData.map(d => d.totalTokens).filter(v => v > 0);
 
 		if (totalTokens === 0 || allValues.length === 0) {
-			return { level: 0, color: '#ebedf0', darkColor: '#161b22' };
+			return { level: 0, color: isDark ? '#161b22' : '#ebedf0', darkColor: '#161b22' };
 		}
 
 		// Simple intensity calculation using quartiles
@@ -93,15 +91,15 @@ export function ActivityGrid({ data }: ActivityGridProps) {
 		const len = sorted.length;
 
 		if (totalTokens >= sorted[Math.floor(len * 0.9)]) {
-			return { level: 4, color: '#216e39', darkColor: '#0e4429' };
+			return { level: 4, color: isDark ? '#0e4429' : '#216e39', darkColor: '#0e4429' };
 		} else if (totalTokens >= sorted[Math.floor(len * 0.7)]) {
-			return { level: 3, color: '#30a14e', darkColor: '#006d32' };
+			return { level: 3, color: isDark ? '#006d32' : '#30a14e', darkColor: '#006d32' };
 		} else if (totalTokens >= sorted[Math.floor(len * 0.5)]) {
-			return { level: 2, color: '#40c463', darkColor: '#26a641' };
+			return { level: 2, color: isDark ? '#26a641' : '#40c463', darkColor: '#26a641' };
 		} else if (totalTokens >= sorted[Math.floor(len * 0.3)]) {
-			return { level: 1, color: '#9be9a8', darkColor: '#39d353' };
+			return { level: 1, color: isDark ? '#39d353' : '#9be9a8', darkColor: '#39d353' };
 		} else {
-			return { level: 0, color: '#ebedf0', darkColor: '#161b22' };
+			return { level: 0, color: isDark ? '#161b22' : '#ebedf0', darkColor: '#161b22' };
 		}
 	};
 
@@ -209,9 +207,9 @@ export function ActivityGrid({ data }: ActivityGridProps) {
 											title={`Week ${weekIndex}: ${displayText || 'No label'}`}
 										>
 											{displayText && (
-												<div className="text-xs text-muted-foreground whitespace-nowrap">
+												<Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
 													{displayText}
-												</div>
+												</Text>
 											)}
 										</div>
 									);
@@ -224,44 +222,27 @@ export function ActivityGrid({ data }: ActivityGridProps) {
 									<div key={`activity-week-${weekIndex}`} className="flex flex-col gap-1">
 										{week.map((dayData, dayIndex) => {
 											const intensity = getIntensityLevel(dayData.totalTokens);
+											const tooltipLabel = dayData.totalTokens > 0
+												? `${dayjs(dayData.date).format('MMM D, YYYY')} — ${formatLargeNumber(dayData.totalTokens)} ${t("usage.tokens", "tokens")}, ${dayData.count} ${t("usage.requests", "requests")}`
+												: `${dayjs(dayData.date).format('MMM D, YYYY')} — ${t("usage.noActivity", "No activity")}`;
 
 											return (
-												<TooltipProvider key={`activity-day-${weekIndex}-${dayIndex}`}>
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<div
-																className="w-3 h-3 rounded-sm cursor-pointer border"
-																style={{
-																	backgroundColor: intensity.color,
-																	borderColor: 'rgba(27, 31, 36, 0.06)'
-																}}
-																data-date={dayjs(dayData.date).format('YYYY-MM-DD')}
-																data-level={intensity.level}
-															/>
-														</TooltipTrigger>
-														<TooltipContent>
-															<div className="text-sm space-y-1">
-																<div className="font-medium">
-																	{dayjs(dayData.date).format('MMM D, YYYY')}
-																</div>
-																{dayData.totalTokens > 0 ? (
-																	<>
-																		<div>
-																			{formatLargeNumber(dayData.totalTokens)} {t("usage.tokens", "tokens")}
-																		</div>
-																		<div>
-																			{dayData.count} {t("usage.requests", "requests")}
-																		</div>
-																	</>
-																) : (
-																	<div className="text-muted-foreground">
-																		{t("usage.noActivity", "No activity")}
-																	</div>
-																)}
-															</div>
-														</TooltipContent>
-													</Tooltip>
-												</TooltipProvider>
+												<Tooltip
+													key={`activity-day-${weekIndex}-${dayIndex}`}
+													label={tooltipLabel}
+													withArrow
+													position="top"
+												>
+													<div
+														className="w-3 h-3 rounded-sm cursor-pointer border"
+														style={{
+															backgroundColor: intensity.color,
+															borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(27, 31, 36, 0.06)'
+														}}
+														data-date={dayjs(dayData.date).format('YYYY-MM-DD')}
+														data-level={intensity.level}
+													/>
+												</Tooltip>
 											);
 										})}
 									</div>
@@ -273,24 +254,27 @@ export function ActivityGrid({ data }: ActivityGridProps) {
 			</div>
 
 			{/* Legend - Fixed position, not scrollable */}
-			<div className="flex items-center px-3 gap-2 mt-3 text-xs text-muted-foreground">
-				<span>{t("usage.activityGrid.less", "Less")}</span>
+			<div className="flex items-center px-3 gap-2 mt-3">
+				<Text size="xs" c="dimmed">{t("usage.activityGrid.less", "Less")}</Text>
 				<div className="flex gap-1">
-					{[0, 1, 2, 3, 4].map((level) => (
-						<div
-							key={level}
-							className="w-3 h-3 rounded-sm border"
-							style={{
-								backgroundColor: level === 0 ? '#ebedf0' :
-									level === 1 ? '#9be9a8' :
-									level === 2 ? '#40c463' :
-									level === 3 ? '#30a14e' : '#216e39',
-								borderColor: 'rgba(27, 31, 36, 0.06)'
-							}}
-						/>
-					))}
+					{[0, 1, 2, 3, 4].map((level) => {
+						const levelColor = level === 0 ? (isDark ? '#161b22' : '#ebedf0') :
+							level === 1 ? (isDark ? '#39d353' : '#9be9a8') :
+							level === 2 ? (isDark ? '#26a641' : '#40c463') :
+							level === 3 ? (isDark ? '#006d32' : '#30a14e') : (isDark ? '#0e4429' : '#216e39');
+						return (
+							<div
+								key={level}
+								className="w-3 h-3 rounded-sm border"
+								style={{
+									backgroundColor: levelColor,
+									borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(27, 31, 36, 0.06)'
+								}}
+							/>
+						);
+					})}
 				</div>
-				<span>{t("usage.activityGrid.more", "More")}</span>
+				<Text size="xs" c="dimmed">{t("usage.activityGrid.more", "More")}</Text>
 			</div>
 		</div>
 	);

@@ -5,25 +5,22 @@ import CodeMirror, { EditorView } from "@uiw/react-codemirror";
 import { BotIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
 import { Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useDisclosure } from "@mantine/hooks";
+import {
+	ActionIcon,
+	Box,
+	Button,
+	Center,
+	Group,
+	Loader,
+	Modal,
+	Stack,
+	Text,
+	TextInput,
+	Tooltip,
+	UnstyledButton,
+} from "@mantine/core";
 import { PageHeader } from "@/components/PageHeader";
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	useClaudeAgents,
 	useDeleteClaudeAgent,
@@ -31,48 +28,62 @@ import {
 } from "@/lib/query";
 import { useCodeMirrorTheme } from "@/lib/use-codemirror-theme";
 
+interface EditingAgent {
+	name: string;
+	content: string;
+}
+
 function AgentsPageContent() {
 	const { t } = useTranslation();
 	const { data: agents, isLoading, error } = useClaudeAgents();
 	const writeAgent = useWriteClaudeAgent();
 	const deleteAgent = useDeleteClaudeAgent();
-	const [agentEdits, setAgentEdits] = useState<Record<string, string>>({});
-	const [isDialogOpen, setIsDialogOpen] = useState(false);
+	const [createOpened, { open: openCreate, close: closeCreate }] =
+		useDisclosure(false);
+	const [editing, setEditing] = useState<EditingAgent | null>(null);
+	const [editContent, setEditContent] = useState("");
 	const codeMirrorTheme = useCodeMirrorTheme();
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">{t("loading")}</div>
-			</div>
+			<Center h="100vh">
+				<Loader size="sm" color="gray" />
+			</Center>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center text-red-500">
+			<Center h="100vh">
+				<Text size="sm" c="red.6">
 					{t("agents.error", { error: error.message })}
-				</div>
-			</div>
+				</Text>
+			</Center>
 		);
 	}
 
-	const handleContentChange = (agentName: string, content: string) => {
-		setAgentEdits((prev) => ({
-			...prev,
-			[agentName]: content,
-		}));
+	const openEditor = (agent: { name: string; content: string }) => {
+		setEditing({ name: agent.name, content: agent.content });
+		setEditContent(agent.content);
 	};
 
-	const handleSaveAgent = async (agentName: string) => {
-		const content = agentEdits[agentName];
-		if (content === undefined) return;
+	const closeEditor = () => {
+		setEditing(null);
+		setEditContent("");
+	};
 
-		writeAgent.mutate({
-			agentName,
-			content,
-		});
+	const hasChanges = editing !== null && editContent !== editing.content;
+
+	const handleSaveAgent = () => {
+		if (!editing || !hasChanges) return;
+		writeAgent.mutate(
+			{ agentName: editing.name, content: editContent },
+			{
+				onSuccess: () => {
+					closeEditor();
+				},
+			},
+		);
 	};
 
 	const handleDeleteAgent = async (agentName: string) => {
@@ -83,150 +94,188 @@ function AgentsPageContent() {
 
 		if (confirmed) {
 			deleteAgent.mutate(agentName);
+			if (editing?.name === agentName) {
+				closeEditor();
+			}
 		}
 	};
 
 	return (
-		<div className="">
+		<Box style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+			{/* Create modal */}
+			<Modal
+				opened={createOpened}
+				onClose={closeCreate}
+				title={t("agents.addAgentTitle")}
+				size="lg"
+				centered
+				overlayProps={{ backgroundOpacity: 0.4, blur: 4 }}
+			>
+				<Text size="sm" c="dimmed" mb="md">
+					{t("agents.addAgentDescription")}
+				</Text>
+				<CreateAgentPanel onClose={closeCreate} />
+			</Modal>
+
+			{/* Edit modal */}
+			<Modal
+				opened={editing !== null}
+				onClose={closeEditor}
+				title={editing?.name}
+				size="lg"
+				centered
+				overlayProps={{ backgroundOpacity: 0.4, blur: 4 }}
+			>
+				{editing && (
+					<Stack gap="md">
+						<Box
+							style={{
+								borderRadius: "var(--mantine-radius-md)",
+								overflow: "hidden",
+								border: "1px solid var(--mantine-color-default-border)",
+							}}
+						>
+							<CodeMirror
+								value={editContent}
+								height="280px"
+								theme={codeMirrorTheme}
+								onChange={setEditContent}
+								placeholder={t("agents.contentPlaceholder")}
+								extensions={[
+									yamlFrontmatter({
+										content: markdown({
+											base: markdownLanguage,
+										}),
+									}),
+									EditorView.lineWrapping,
+								]}
+								basicSetup={{
+									lineNumbers: false,
+									highlightActiveLineGutter: true,
+									foldGutter: false,
+									dropCursor: false,
+									allowMultipleSelections: false,
+									indentOnInput: true,
+									bracketMatching: true,
+									closeBrackets: true,
+									autocompletion: true,
+									highlightActiveLine: true,
+									highlightSelectionMatches: true,
+									searchKeymap: false,
+								}}
+							/>
+						</Box>
+						<Group justify="space-between">
+							<Tooltip label={t("agents.deleteTitle")} position="bottom">
+								<ActionIcon
+									variant="subtle"
+									color="red"
+									size="md"
+									onClick={() => handleDeleteAgent(editing.name)}
+									disabled={deleteAgent.isPending}
+									style={{ opacity: 0.5 }}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.opacity = "1";
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.opacity = "0.5";
+									}}
+								>
+									<TrashIcon size={16} />
+								</ActionIcon>
+							</Tooltip>
+
+							<Tooltip
+								label={`${t("agents.save")} (⌘S)`}
+								position="bottom"
+							>
+								<ActionIcon
+									variant={hasChanges ? "filled" : "subtle"}
+									color={hasChanges ? "brand" : "gray"}
+									size="md"
+									onClick={handleSaveAgent}
+									disabled={!hasChanges || writeAgent.isPending}
+									loading={writeAgent.isPending}
+								>
+									<SaveIcon size={16} />
+								</ActionIcon>
+							</Tooltip>
+						</Group>
+					</Stack>
+				)}
+			</Modal>
+
 			<PageHeader
 				title={t("agents.title")}
 				description={t("agents.description")}
 				actions={
-					<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-						<DialogTrigger asChild>
-							<Button
-								variant="ghost"
-								className="text-muted-foreground"
-								size="sm"
-							>
-								<PlusIcon size={14} />
-								{t("agents.addAgent")}
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="max-w-[600px]">
-							<DialogHeader>
-								<DialogTitle className="">
-									{t("agents.addAgentTitle")}
-								</DialogTitle>
-								<DialogDescription className="text-muted-foreground text-sm">
-									{t("agents.addAgentDescription")}
-								</DialogDescription>
-							</DialogHeader>
-							<CreateAgentPanel onClose={() => setIsDialogOpen(false)} />
-						</DialogContent>
-					</Dialog>
+					<Tooltip label={t("agents.addAgent")} position="bottom">
+						<ActionIcon
+							variant="subtle"
+							color="gray"
+							size="md"
+							onClick={openCreate}
+						>
+							<PlusIcon size={16} />
+						</ActionIcon>
+					</Tooltip>
 				}
 			/>
-			<div className="">
-				{!agents || agents.length === 0 ? (
-					<div className="text-center text-muted-foreground py-8">
-						{t("agents.noAgents")}
-					</div>
-				) : (
-					<ScrollArea className="h-full">
-						<div className="">
-							<Accordion type="multiple" className="">
-								{agents.map((agent) => (
-									<AccordionItem
-										key={agent.name}
-										value={agent.name}
-										className="bg-card"
-									>
-										<AccordionTrigger className="hover:no-underline px-4 py-2 bg-card hover:bg-accent duration-150">
-											<div className="flex items-center gap-2">
-												<BotIcon size={12} />
-												<span className="font-medium">{agent.name}</span>
-												<span className="text-sm text-muted-foreground font-normal">
-													{`~/.claude/agents/${agent.name}.md`}
-												</span>
-											</div>
-										</AccordionTrigger>
-										<AccordionContent className="pb-3">
-											<div className="px-3 pt-3 space-y-3">
-												<div className="rounded-lg overflow-hidden border">
-													<CodeMirror
-														value={
-															agentEdits[agent.name] !== undefined
-																? agentEdits[agent.name]
-																: agent.content
-														}
-														height="180px"
-														theme={codeMirrorTheme}
-														onChange={(value) =>
-															handleContentChange(agent.name, value)
-														}
-														placeholder={t("agents.contentPlaceholder")}
-														extensions={[
-															yamlFrontmatter({
-																content: markdown({
-																	base: markdownLanguage,
-																}),
-															}),
-															EditorView.lineWrapping,
-														]}
-														basicSetup={{
-															lineNumbers: false,
-															highlightActiveLineGutter: true,
-															foldGutter: false,
-															dropCursor: false,
-															allowMultipleSelections: false,
-															indentOnInput: true,
-															bracketMatching: true,
-															closeBrackets: true,
-															autocompletion: true,
-															highlightActiveLine: true,
-															highlightSelectionMatches: true,
-															searchKeymap: false,
-														}}
-													/>
-												</div>
-												<div className="flex justify-between bg-card">
-													<Button
-														variant="outline"
-														onClick={() => handleSaveAgent(agent.name)}
-														disabled={
-															writeAgent.isPending ||
-															agentEdits[agent.name] === undefined
-														}
-														size="sm"
-													>
-														<SaveIcon size={14} className="" />
-														{writeAgent.isPending
-															? t("agents.saving")
-															: t("agents.save")}
-													</Button>
 
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => handleDeleteAgent(agent.name)}
-														disabled={deleteAgent.isPending}
-													>
-														<TrashIcon size={14} className="" />
-													</Button>
-												</div>
-											</div>
-										</AccordionContent>
-									</AccordionItem>
-								))}
-							</Accordion>
-						</div>
-					</ScrollArea>
+			{/* Agent list */}
+			<Box px="lg" pb="lg" style={{ flex: 1, overflow: "auto" }}>
+				{!agents || agents.length === 0 ? (
+					<Center py="xl">
+						<Text size="sm" c="dimmed">
+							{t("agents.noAgents")}
+						</Text>
+					</Center>
+				) : (
+					<Stack gap={0}>
+						{agents.map((agent) => (
+							<UnstyledButton
+								key={agent.name}
+								onClick={() => openEditor(agent)}
+								py="sm"
+								px="xs"
+								style={{
+									borderBottom:
+										"1px solid var(--mantine-color-default-border)",
+									borderRadius: 0,
+								}}
+							>
+								<Group justify="space-between" align="center">
+									<Group gap="xs">
+										<BotIcon size={14} />
+										<Box>
+											<Text size="sm" fw={500}>
+												{agent.name}
+											</Text>
+											<Text size="xs" c="dimmed">
+												{`~/.claude/agents/${agent.name}.md`}
+											</Text>
+										</Box>
+									</Group>
+									<Text size="xs" c="dimmed">
+										{agent.content.split("\n").length} lines
+									</Text>
+								</Group>
+							</UnstyledButton>
+						))}
+					</Stack>
 				)}
-			</div>
-		</div>
+			</Box>
+		</Box>
 	);
 }
 
 export function AgentsPage() {
-	const { t } = useTranslation();
-
 	return (
 		<Suspense
 			fallback={
-				<div className="flex items-center justify-center min-h-screen">
-					<div className="text-center">{t("loading")}</div>
-				</div>
+				<Center h="100vh">
+					<Loader size="sm" color="gray" />
+				</Center>
 			}
 		>
 			<AgentsPageContent />
@@ -255,7 +304,6 @@ the subagent should follow.`);
 	const codeMirrorTheme = useCodeMirrorTheme();
 
 	const handleCreateAgent = async () => {
-		// Validate agent name
 		if (!agentName.trim()) {
 			await message(t("agents.emptyNameError"), {
 				title: t("agents.validationError"),
@@ -264,7 +312,6 @@ the subagent should follow.`);
 			return;
 		}
 
-		// Check if agent already exists
 		const exists = agents?.some((agent) => agent.name === agentName);
 		if (exists) {
 			await message(t("agents.agentExistsError", { agentName }), {
@@ -274,7 +321,6 @@ the subagent should follow.`);
 			return;
 		}
 
-		// Validate content
 		if (!agentContent.trim()) {
 			await message(t("agents.emptyContentError"), {
 				title: t("agents.validationError"),
@@ -299,24 +345,25 @@ the subagent should follow.`);
 	};
 
 	return (
-		<div className="space-y-4 mt-4">
-			<div className="space-y-2">
-				<Label className="block" htmlFor="agent-name">
-					{t("agents.agentName")}
-				</Label>
-				<Input
-					id="agent-name"
-					value={agentName}
-					onChange={(e) => setAgentName(e.target.value)}
-					placeholder={t("agents.agentNamePlaceholder")}
-				/>
-			</div>
+		<Stack gap="md">
+			<TextInput
+				label={t("agents.agentName")}
+				value={agentName}
+				onChange={(e) => setAgentName(e.currentTarget.value)}
+				placeholder={t("agents.agentNamePlaceholder")}
+			/>
 
-			<div className="space-y-2">
-				<Label className="block" htmlFor="agent-content">
+			<Box>
+				<Text size="sm" fw={500} mb={4}>
 					{t("agents.agentContent")}
-				</Label>
-				<div className="rounded-lg overflow-hidden border">
+				</Text>
+				<Box
+					style={{
+						borderRadius: "var(--mantine-radius-md)",
+						overflow: "hidden",
+						border: "1px solid var(--mantine-color-default-border)",
+					}}
+				>
 					<CodeMirror
 						value={agentContent}
 						onChange={(value) => setAgentContent(value)}
@@ -346,19 +393,22 @@ the subagent should follow.`);
 							searchKeymap: false,
 						}}
 					/>
-				</div>
-			</div>
+				</Box>
+			</Box>
 
-			<div className="flex justify-end">
+			<Group justify="flex-end">
 				<Button
 					onClick={handleCreateAgent}
 					disabled={
-						!agentName.trim() || !agentContent.trim() || writeAgent.isPending
+						!agentName.trim() ||
+						!agentContent.trim() ||
+						writeAgent.isPending
 					}
+					loading={writeAgent.isPending}
 				>
-					{writeAgent.isPending ? t("agents.creating") : t("agents.create")}
+					{t("agents.create")}
 				</Button>
-			</div>
-		</div>
+			</Group>
+		</Stack>
 	);
 }

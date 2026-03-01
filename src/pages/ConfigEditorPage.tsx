@@ -7,22 +7,17 @@ import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { match } from "ts-pattern";
-import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/PageHeader";
 import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+	ActionIcon,
+	Button,
+	Menu,
+	NativeSelect,
+	Paper,
+	Text,
+	TextInput,
+	Textarea,
+} from "@mantine/core";
 import { useDeleteConfig, useStore, useUpdateConfig } from "../lib/query";
 
 type FieldConfig = {
@@ -705,64 +700,60 @@ export function ConfigEditorPage() {
 
 	return (
 		<div className="space-y-4 ">
-			<nav
-				className="px-5 py-3 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-md z-10"
-				data-tauri-drag-region
+			<PageHeader
+				actions={
+					<div className="flex items-center gap-2">
+						<ActionIcon
+							onClick={onDelete}
+							disabled={deleteStore.isPending}
+							variant="subtle"
+							size="sm"
+							color="gray"
+						>
+							<TrashIcon size={14} />
+						</ActionIcon>
+
+						<Button onClick={onSave} disabled={updateStore.isPending} size="sm">
+							{t("configEditor.save")}
+						</Button>
+					</div>
+				}
 			>
-				<Button asChild variant="ghost" size="sm">
-					<Link to="/" className="">
-						<ChevronLeftIcon size={14} className="text-muted-foreground" />
-						<span className="text-muted-foreground">
-							{t("configSwitcher.allConfigs")}
-						</span>
-					</Link>
+				<Button component={Link} to="/" variant="subtle" size="sm" color="gray">
+					<ChevronLeftIcon size={14} />
+					<span>{t("configSwitcher.allConfigs")}</span>
 				</Button>
-
-				<div className="mr-2 flex items-center gap-2">
-					<Button
-						onClick={onDelete}
-						disabled={deleteStore.isPending}
-						variant="ghost"
-						size="sm"
-						className=""
-					>
-						<TrashIcon size={14} className="text-muted-foreground" />
-					</Button>
-
-					<Button onClick={onSave} disabled={updateStore.isPending} size="sm">
-						{t("configEditor.save")}
-					</Button>
-				</div>
-			</nav>
+			</PageHeader>
 
 			<section className="px-8">
-				<h3 className="pb-2 font-medium mx-2 text-muted-foreground text-sm">
+				<Text size="sm" fw={500} c="dimmed" pb="xs" mx="xs">
 					{t("configEditor.configName")}
-				</h3>
-				<input
+				</Text>
+				<TextInput
 					{...register("configName")}
-					type="text"
-					className="text-sm px-2 text-muted-foreground border rounded-sm w-[200px] h-7 bg-background"
+					size="xs"
+					w={200}
 				/>
 			</section>
 			<section className="space-y-8 pb-8">
 				{fields.map((field) => (
 					<div key={field.sectionName}>
-						<h3 className="px-10 py-2 font-medium  text-muted-foreground text-sm">
+						<Text size="sm" fw={500} c="dimmed" px={40} py="xs">
 							{field.sectionName}
-						</h3>
-						<div className="mx-8 rounded-lg bg-card p-3 space-y-5 border">
+						</Text>
+						<Paper withBorder mx={32} p="md" radius="lg">
+							<div className="space-y-5">
 							{field.fields.map((field) => (
-								<div className="" key={field.name}>
+								<div key={field.name}>
 									<div className="flex gap-2 items-center justify-between">
 										<div className="space-y-1">
-											<div className="text-muted-foreground text-sm min-w-40 shrink-0">
+											<Text size="sm" c="dimmed" style={{ minWidth: "10rem", flexShrink: 0 }}>
 												{field.label}
-											</div>
+											</Text>
 											{field.description && (
-												<p className="text-muted-foreground/50 text-sm line-clamp-1">
+												<Text size="sm" c="dimmed" opacity={0.5} lineClamp={1}>
 													{field.description}
-												</p>
+												</Text>
 											)}
 										</div>
 										{match({ type: field.type, name: field.name })
@@ -771,22 +762,26 @@ export function ConfigEditorPage() {
 													name={field.name}
 													control={control}
 													render={({ field: { onChange, value } }) => (
-														<Select
+														<NativeSelect
 															value={
-																value !== undefined ? String(value) : undefined
+																value !== undefined ? String(value) : ""
 															}
-															onValueChange={(val) => onChange(val === "true")}
-														>
-															<SelectTrigger
-																className={`w-1/2 ${highlightedField === field.name ? "animate-blink" : ""}`}
-															>
-																<SelectValue placeholder="Default" />
-															</SelectTrigger>
-															<SelectContent>
-																<SelectItem value="true">true</SelectItem>
-																<SelectItem value="false">false</SelectItem>
-															</SelectContent>
-														</Select>
+															onChange={(e) => {
+																const val = e.currentTarget.value;
+																if (val === "") {
+																	onChange(undefined);
+																} else {
+																	onChange(val === "true");
+																}
+															}}
+															data={[
+																{ label: "Default", value: "" },
+																{ label: "true", value: "true" },
+																{ label: "false", value: "false" },
+															]}
+															className={`w-1/2 ${highlightedField === field.name ? "animate-blink" : ""}`}
+															size="xs"
+														/>
 													)}
 												/>
 											))
@@ -795,87 +790,89 @@ export function ConfigEditorPage() {
 													name={field.name}
 													control={control}
 													render={({ field: { onChange, value } }) => (
-														<Select value={value} onValueChange={onChange}>
-															<SelectTrigger
-																className={`w-1/2 ${highlightedField === field.name ? "animate-blink" : ""}`}
-															>
-																<SelectValue
-																	placeholder={field.placeholder || "Select..."}
-																/>
-															</SelectTrigger>
-															<SelectContent>
-																{field.options?.map((option) => (
-																	<SelectItem key={option} value={option}>
-																		{option}
-																	</SelectItem>
-																))}
-															</SelectContent>
-														</Select>
+														<NativeSelect
+															value={value || ""}
+															onChange={(e) => {
+																const val = e.currentTarget.value;
+																onChange(val === "" ? undefined : val);
+															}}
+															data={[
+																{ label: field.placeholder || "Select...", value: "" },
+																...(field.options?.map((option) => ({
+																	label: option,
+																	value: option,
+																})) || []),
+															]}
+															className={`w-1/2 ${highlightedField === field.name ? "animate-blink" : ""}`}
+															size="xs"
+														/>
 													)}
 												/>
 											))
 											.with({ type: "textarea" }, () => (
 												<Textarea
 													{...register(field.name)}
-													className={`w-1/2 text-sm ${highlightedField === field.name ? "animate-blink" : ""}`}
+													className={`w-1/2 ${highlightedField === field.name ? "animate-blink" : ""}`}
 													placeholder={field.placeholder}
+													size="xs"
 												/>
 											))
 											.with({ type: "number" }, () => (
-												<Input
+												<TextInput
 													{...register(field.name, {
 														setValueAs: (v) =>
 															v === "" ? undefined : Number(v),
 													})}
 													type="number"
-													className={`text-sm w-1/2 h-7 ${highlightedField === field.name ? "animate-blink" : ""}`}
+													className={`w-1/2 ${highlightedField === field.name ? "animate-blink" : ""}`}
 													placeholder={field.placeholder}
+													size="xs"
 												/>
 											))
 											.with({ name: "env.ANTHROPIC_BASE_URL" }, () => (
 												<div className="inline-flex items-center gap-2 w-1/2 flex-row-reverse">
-													<DropdownMenu>
-														<DropdownMenuTrigger asChild>
-															<Button
+													<Menu position="bottom-end">
+														<Menu.Target>
+															<ActionIcon
 																type="button"
 																variant="outline"
 																size="sm"
-																className="h-7 w-7 p-0 shrink-0"
 															>
 																<PlusIcon className="h-3.5 w-3.5" />
-															</Button>
-														</DropdownMenuTrigger>
-														<DropdownMenuContent align="end">
-															<DropdownMenuItem
+															</ActionIcon>
+														</Menu.Target>
+														<Menu.Dropdown>
+															<Menu.Item
 																onClick={() => applyPreset("z.ai")}
+																leftSection={<ZAI size={12} />}
 															>
-																<ZAI size={12} />
 																Z.ai
-															</DropdownMenuItem>
-															<DropdownMenuItem
+															</Menu.Item>
+															<Menu.Item
 																onClick={() => applyPreset("z.ai-china")}
+																leftSection={<ZAI size={12} />}
 															>
-																<ZAI size={12} />
 																Z.ai (China)
-															</DropdownMenuItem>
-															<DropdownMenuItem
+															</Menu.Item>
+															<Menu.Item
 																onClick={() => applyPreset("kimi")}
+																leftSection={<Kimi size={12} />}
 															>
-																<Kimi size={12} />
 																Kimi AI
-															</DropdownMenuItem>
-														</DropdownMenuContent>
-													</DropdownMenu>
-													<Input
+															</Menu.Item>
+														</Menu.Dropdown>
+													</Menu>
+													<TextInput
 														{...register(field.name)}
 														type="text"
-														className={`text-sm h-7 flex-1 ${highlightedField === field.name ? "animate-blink" : ""}`}
+														className={`flex-1 ${highlightedField === field.name ? "animate-blink" : ""}`}
 														placeholder={field.placeholder}
+														size="xs"
 													/>
 												</div>
 											))
 											.otherwise(() => {
-												const className = `text-sm w-1/2 h-7 ${highlightedField === field.name ? "animate-blink" : ""}`;
+												const className = `w-1/2 ${highlightedField === field.name ? "animate-blink" : ""}`;
 												if (highlightedField === field.name) {
 													console.log(
 														"Highlighting field:",
@@ -885,18 +882,20 @@ export function ConfigEditorPage() {
 													);
 												}
 												return (
-													<Input
+													<TextInput
 														{...register(field.name)}
 														type="text"
 														className={className}
 														placeholder={field.placeholder}
+														size="xs"
 													/>
 												);
 											})}
 									</div>
 								</div>
 							))}
-						</div>
+							</div>
+						</Paper>
 					</div>
 				))}
 			</section>

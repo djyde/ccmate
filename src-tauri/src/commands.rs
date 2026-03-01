@@ -1569,30 +1569,18 @@ pub async fn track(event: String, properties: serde_json::Value, app: tauri::App
 
 // Hook management functions
 
-/// Get the latest hook command based on the current operating system
-fn get_latest_hook_command() -> serde_json::Value {
-    if cfg!(target_os = "windows") {
-        serde_json::json!({
-            "__ccmate__": true,
-            "type": "command",
-            "command": "powershell -Command \"try { Invoke-RestMethod -Uri http://localhost:59948/claude_code/hooks -Method POST -ContentType 'application/json' -Body $input -ErrorAction Stop } catch { '' }\""
-        })
-    } else {
-        serde_json::json!({
-            "__ccmate__": true,
-            "type": "command",
-            "command": "curl -s -X POST http://localhost:59948/claude_code/hooks -H 'Content-Type: application/json' --data-binary @- 2>/dev/null || echo"
-        })
-    }
+/// Get the latest hook definition using native HTTP hook type
+fn get_latest_hook() -> serde_json::Value {
+    serde_json::json!({
+        "__ccmate__": true,
+        "type": "http",
+        "url": "http://localhost:59948/claude_code/hooks"
+    })
 }
 
 /// Update existing ccmate hooks for specified events (doesn't add new ones)
 fn update_existing_hooks(hooks_obj: &mut serde_json::Map<String, serde_json::Value>, events: &[&str]) -> Result<bool, String> {
-    let latest_hook_command = get_latest_hook_command();
-    let latest_command_str = latest_hook_command.get("command")
-        .and_then(|cmd| cmd.as_str())
-        .unwrap_or("");
-
+    let latest_hook = get_latest_hook();
     let mut hook_updated = false;
 
     for event in events {
@@ -1602,14 +1590,11 @@ fn update_existing_hooks(hooks_obj: &mut serde_json::Map<String, serde_json::Val
                 if let Some(hooks_array) = entry.get_mut("hooks").and_then(|h| h.as_array_mut()) {
                     for hook in hooks_array.iter_mut() {
                         if hook.get("__ccmate__").is_some() {
-                            // Compare only the command string, not the entire JSON object
-                            if let Some(existing_command) = hook.get("command").and_then(|cmd| cmd.as_str()) {
-                                if existing_command != latest_command_str {
-                                    // Update only the command field, preserve other properties
-                                    hook["command"] = serde_json::Value::String(latest_command_str.to_string());
-                                    hook_updated = true;
-                                    println!("🔄 Updated {} hook command: {}", event, latest_command_str);
-                                }
+                            // Replace the entire hook if it differs (migrates command->http)
+                            if *hook != latest_hook {
+                                *hook = latest_hook.clone();
+                                hook_updated = true;
+                                println!("🔄 Updated {} hook to http type", event);
                             }
                         }
                     }
@@ -1623,7 +1608,7 @@ fn update_existing_hooks(hooks_obj: &mut serde_json::Map<String, serde_json::Val
 
 /// Update or add ccmate hooks for specified events
 fn update_or_add_hooks(hooks_obj: &mut serde_json::Map<String, serde_json::Value>, events: &[&str]) -> Result<bool, String> {
-    let latest_hook_command = get_latest_hook_command();
+    let latest_hook = get_latest_hook();
     let mut hook_updated = false;
 
     for event in events {
@@ -1633,9 +1618,8 @@ fn update_or_add_hooks(hooks_obj: &mut serde_json::Map<String, serde_json::Value
                 if let Some(hooks_array) = entry.get_mut("hooks").and_then(|h| h.as_array_mut()) {
                     for hook in hooks_array.iter_mut() {
                         if hook.get("__ccmate__").is_some() {
-                            // Update the command to the latest version
-                            if hook.get("command") != latest_hook_command.get("command") {
-                                *hook = latest_hook_command.clone();
+                            if *hook != latest_hook {
+                                *hook = latest_hook.clone();
                                 hook_updated = true;
                             }
                         }
@@ -1654,7 +1638,7 @@ fn update_or_add_hooks(hooks_obj: &mut serde_json::Map<String, serde_json::Value
 
             if !ccmate_hook_exists {
                 let ccmate_hook_entry = serde_json::json!({
-                    "hooks": [latest_hook_command.clone()]
+                    "hooks": [latest_hook.clone()]
                 });
                 event_hooks.push(ccmate_hook_entry);
                 hook_updated = true;
@@ -1662,7 +1646,7 @@ fn update_or_add_hooks(hooks_obj: &mut serde_json::Map<String, serde_json::Value
         } else {
             // Create event hooks array with ccmate hook
             let ccmate_hook_entry = serde_json::json!({
-                "hooks": [latest_hook_command.clone()]
+                "hooks": [latest_hook.clone()]
             });
             hooks_obj.insert(event.to_string(), serde_json::Value::Array(vec![ccmate_hook_entry]));
             hook_updated = true;

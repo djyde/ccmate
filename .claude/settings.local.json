@@ -39,7 +39,9 @@
       "Bash(gh:*)",
       "Bash(shasum:*)",
       "mcp__context7__query-docs",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "mcp__web-reader__webReader"
     ],
     "deny": [],
     "ask": []

@@ -1,37 +1,59 @@
+import { Box, Group, Stack, Text, Title } from "@mantine/core";
+
 interface PageHeaderProps {
-	title: string;
+	title?: string;
 	description?: string;
 	actions?: React.ReactNode;
+	children?: React.ReactNode;
 }
 
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
+export function PageHeader({
+	title,
+	description,
+	actions,
+	children,
+}: PageHeaderProps) {
 	return (
-		<div
-			className="sticky top-0 z-10 bg-background/80 backdrop-blur-md"
+		<Box
+			pos="sticky"
+			top={0}
+			style={{
+				zIndex: "var(--mantine-z-index-app)" as unknown as number,
+				backgroundColor: "var(--mantine-color-body)",
+			}}
 			data-tauri-drag-region
 		>
-			<div
-				className="flex items-center justify-between px-5 pt-5 pb-3"
+			<Group
+				justify="space-between"
+				px="lg"
+				pt="lg"
+				pb="sm"
 				data-tauri-drag-region
 			>
-				<div data-tauri-drag-region>
-					<h1
-						className="text-base font-semibold tracking-tight"
-						data-tauri-drag-region
-					>
-						{title}
-					</h1>
-					{description && (
-						<p
-							className="text-sm text-muted-foreground mt-0.5"
-							data-tauri-drag-region
-						>
-							{description}
-						</p>
-					)}
-				</div>
-				{actions && <div className="flex items-center gap-2">{actions}</div>}
-			</div>
-		</div>
+				{children ? (
+					<Group gap="xs" miw={0} data-tauri-drag-region>
+						{children}
+					</Group>
+				) : (
+					<Stack gap={2} data-tauri-drag-region>
+						{title && (
+							<Title
+								order={4}
+								fw={600}
+								data-tauri-drag-region
+							>
+								{title}
+							</Title>
+						)}
+						{description && (
+							<Text size="sm" c="dimmed" data-tauri-drag-region>
+								{description}
+							</Text>
+						)}
+					</Stack>
+				)}
+				{actions && <Group gap="xs">{actions}</Group>}
+			</Group>
+		</Box>
 	);
 }

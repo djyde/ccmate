@@ -1,16 +1,10 @@
-import {
-	ArrowDownIcon,
-	ArrowUpIcon,
-	CircleDotDashedIcon,
-	RefreshCwIcon,
-} from "lucide-react";
+import { RefreshCwIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ActionIcon, SimpleGrid, Skeleton, Text, Tooltip } from "@mantine/core";
 import { ActivityGrid } from "@/components/ActivityGrid";
 import { PageHeader } from "@/components/PageHeader";
 import { TokenUsageChart } from "@/components/TokenUsageChart";
-import { Button } from "@/components/ui/button";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { type ProjectUsageRecord, useProjectUsageFiles } from "@/lib/query";
 import { cn, formatLargeNumber } from "@/lib/utils";
 
@@ -34,138 +28,118 @@ export function UsagePage() {
 		}
 	}, [usageData]);
 
+	const inputTokens = filteredUsageData.reduce(
+		(sum, record) => sum + (record.usage?.input_tokens || 0),
+		0,
+	);
+	const outputTokens = filteredUsageData.reduce(
+		(sum, record) => sum + (record.usage?.output_tokens || 0),
+		0,
+	);
+	const cacheReadTokens = filteredUsageData.reduce(
+		(sum, record) => sum + (record.usage?.cache_read_input_tokens || 0),
+		0,
+	);
+
 	return (
-		<TooltipProvider>
+		<>
 			<PageHeader
 				title={t("usage.title")}
 				description={t("usage.description")}
 				actions={
-					<Button
-						disabled={isRefetching || isLoading}
-						onClick={(_) => {
-							refetch();
-						}}
-						variant="ghost"
-						size="sm"
-						className="text-muted-foreground h-8 px-3"
+					<Tooltip
+						label={
+							isRefetching || isLoading
+								? t("usage.refreshing")
+								: t("usage.refresh")
+						}
 					>
-						<RefreshCwIcon
-							className={cn({
-								"animate-spin": isRefetching || isLoading,
-							})}
-						/>
-						{isRefetching || isLoading
-							? t("usage.refreshing")
-							: t("usage.refresh")}
-					</Button>
+						<ActionIcon
+							variant="subtle"
+							color="gray"
+							size="md"
+							disabled={isRefetching || isLoading}
+							onClick={() => refetch()}
+						>
+							<RefreshCwIcon
+								size={16}
+								className={cn({
+									"animate-spin": isRefetching || isLoading,
+								})}
+							/>
+						</ActionIcon>
+					</Tooltip>
 				}
 			/>
-			<div className="px-5 space-y-4">
+			<div className="px-5 space-y-6 pb-6 min-w-0 overflow-hidden">
 				{isLoading ? (
-					<div className="space-y-6">
-						<div className="p-1 border rounded-lg pb-5">
-							<div className="space-y-4">
-								{[1, 2, 3].map((i) => (
-									<div
-										key={i}
-										className="bg-card p-4 rounded-lg space-y-2 border"
-									>
-										<div className="h-4  rounded animate-pulse"></div>
-										<div className="h-8 rounded animate-pulse"></div>
-									</div>
-								))}
-							</div>
-						</div>
-						<div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div className="space-y-8">
+						<Skeleton height={120} radius="md" />
+						<SimpleGrid cols={3}>
 							{[1, 2, 3].map((i) => (
-								<div
-									key={i}
-									className="bg-card p-4 rounded-lg space-y-2 border"
-								>
-									<div className="h-4  rounded animate-pulse"></div>
-									<div className="h-8 rounded animate-pulse"></div>
+								<div key={i} className="space-y-3">
+									<Skeleton height={12} width="40%" radius="sm" />
+									<Skeleton height={36} width="60%" radius="sm" />
 								</div>
 							))}
-						</div>
-						<div className="mt-6 bg-card p-6 rounded-lg w-full min-w-0 border">
-							<div className="h-64 rounded animate-pulse"></div>
-						</div>
+						</SimpleGrid>
+						<Skeleton height={320} radius="md" />
 					</div>
 				) : error ? (
-					<p>{t("usage.error", { error: error.message })}</p>
+					<Text c="dimmed">
+						{t("usage.error", { error: error.message })}
+					</Text>
 				) : usageData && usageData.length > 0 ? (
 					<>
-						<div className=" rounded-lg pb-5">
-							<ActivityGrid data={usageData} />
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="bg-blue-50 border-blue-100 text-blue-700 border-2 p-4 rounded-lg space-y-2 dark:bg-blue-950/20 dark:border-blue-900/30 dark:text-blue-300">
-								<div className="flex items-center gap-2">
-									<ArrowDownIcon size={12} />
-									<h3 className="font-medium">{t("usage.inputTokens")}</h3>
+						<SimpleGrid cols={3}>
+							<div className="py-2">
+								<div className="flex items-center gap-2 mb-1">
+									<span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--mantine-color-blue-5)" }} />
+									<Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+										{t("usage.inputTokens")}
+									</Text>
 								</div>
-								<p className="text-2xl font-bold">
-									{formatLargeNumber(
-										filteredUsageData.reduce(
-											(sum, record) => sum + (record.usage?.input_tokens || 0),
-											0,
-										),
-									)}
+								<p className="text-3xl font-light tracking-tight">
+									{formatLargeNumber(inputTokens)}
 								</p>
 							</div>
-							<div className="bg-emerald-50 border-emerald-100 text-emerald-700 border-2 p-4 rounded-lg space-y-2 dark:bg-emerald-950/20 dark:border-emerald-900/30 dark:text-emerald-300">
-								<div className="flex items-center gap-2">
-									<ArrowUpIcon size={12} />
-									<h3 className="font-medium">{t("usage.outputTokens")}</h3>
+							<div className="py-2 pl-6" style={{ borderLeft: "1px solid var(--mantine-color-default-border)" }}>
+								<div className="flex items-center gap-2 mb-1">
+									<span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--mantine-color-green-5)" }} />
+									<Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+										{t("usage.outputTokens")}
+									</Text>
 								</div>
-								<p className="text-2xl font-bold">
-									{formatLargeNumber(
-										filteredUsageData.reduce(
-											(sum, record) => sum + (record.usage?.output_tokens || 0),
-											0,
-										),
-									)}
+								<p className="text-3xl font-light tracking-tight">
+									{formatLargeNumber(outputTokens)}
 								</p>
 							</div>
-							<div className="bg-amber-50 border-amber-100 text-amber-700 border-2 p-4 rounded-lg space-y-2 dark:bg-amber-950/20 dark:border-amber-900/30 dark:text-amber-300">
-								<div className="flex items-center gap-2">
-									<CircleDotDashedIcon size={12} />
-									<h3 className="font-medium">{t("usage.cacheReadTokens")}</h3>
+							<div className="py-2 pl-6" style={{ borderLeft: "1px solid var(--mantine-color-default-border)" }}>
+								<div className="flex items-center gap-2 mb-1">
+									<span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "var(--mantine-color-yellow-5)" }} />
+									<Text size="xs" c="dimmed" tt="uppercase" style={{ letterSpacing: "0.05em" }}>
+										{t("usage.cacheReadTokens")}
+									</Text>
 								</div>
-								<p className="text-2xl font-bold">
-									{formatLargeNumber(
-										filteredUsageData.reduce(
-											(sum, record) =>
-												sum + (record.usage?.cache_read_input_tokens || 0),
-											0,
-										),
-									)}
+								<p className="text-3xl font-light tracking-tight">
+									{formatLargeNumber(cacheReadTokens)}
 								</p>
 							</div>
+						</SimpleGrid>
 
-							{/* <div className="bg-zinc-50 p-4 rounded-lg space-y-2">
-                <div className="flex items-start justify-between">
-                  <h3 className="font-medium">Cost</h3>
-                  <Button variant="ghost" size="icon" className="-my-2 -mr-2">
-                    <SettingsIcon />
-                  </Button>
-                </div>
-                <p className="text-2xl font-bold">
-                  $0.00
-                </p>
-              </div> */}
-						</div>
-						<div className="mt-6 bg-card p-6 rounded-lg w-full min-w-0 border">
+						<div className="min-w-0">
 							<TokenUsageChart
 								data={usageData}
 								onFilteredDataChange={setFilteredUsageData}
 							/>
 						</div>
+
+						<ActivityGrid data={usageData} />
 					</>
 				) : (
-					<p>{t("usage.noData")}</p>
+					<Text c="dimmed">{t("usage.noData")}</Text>
 				)}
 			</div>
-		</TooltipProvider>
+		</>
 	);
 }

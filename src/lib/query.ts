@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import { nanoid } from "nanoid";
-import { toast } from "sonner";
+import { notifications } from "@mantine/notifications";
 import i18n from "../i18n";
 
 export type ConfigType =
@@ -81,9 +81,10 @@ export const useWriteConfigFile = () => {
 			content: unknown;
 		}) => invoke<void>("write_config_file", { configType, content }),
 		onSuccess: (_, variables) => {
-			toast.success(
-				i18n.t("toast.configSaved", { configType: variables.configType }),
-			);
+			notifications.show({
+				message: i18n.t("toast.configSaved", { configType: variables.configType }),
+				color: "green",
+			});
 			queryClient.invalidateQueries({
 				queryKey: ["config-file", variables.configType],
 			});
@@ -92,7 +93,7 @@ export const useWriteConfigFile = () => {
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.configSaveFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.configSaveFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -101,12 +102,12 @@ export const useBackupClaudeConfigs = () => {
 	return useMutation({
 		mutationFn: () => invoke<void>("backup_claude_configs"),
 		onSuccess: () => {
-			toast.success(i18n.t("toast.backupSuccess"));
+			notifications.show({ message: i18n.t("toast.backupSuccess"), color: "green" });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.backupFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.backupFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -149,7 +150,7 @@ export const useCreateConfig = () => {
 			return invoke<ConfigStore>("create_config", { id, title, settings });
 		},
 		onSuccess: async () => {
-			toast.success(i18n.t("toast.storeCreated"));
+			notifications.show({ message: i18n.t("toast.storeCreated"), color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["stores"] });
 			queryClient.invalidateQueries({ queryKey: ["current-store"] });
 			await rebuildTrayMenu();
@@ -157,7 +158,7 @@ export const useCreateConfig = () => {
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.storeCreateFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.storeCreateFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -171,7 +172,7 @@ export const useDeleteConfig = () => {
 				storeId: body.storeId,
 			}),
 		onSuccess: async () => {
-			toast.success(i18n.t("toast.storeDeleted"));
+			notifications.show({ message: i18n.t("toast.storeDeleted"), color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["stores"] });
 			queryClient.invalidateQueries({ queryKey: ["current-store"] });
 			await rebuildTrayMenu();
@@ -179,7 +180,7 @@ export const useDeleteConfig = () => {
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.storeDeleteFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.storeDeleteFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -191,7 +192,7 @@ export const useSetUsingConfig = () => {
 		mutationFn: (storeId: string) =>
 			invoke<void>("set_using_config", { storeId }),
 		onSuccess: () => {
-			toast.success(i18n.t("toast.storeActivated"));
+			notifications.show({ message: i18n.t("toast.storeActivated"), color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["stores"] });
 			queryClient.invalidateQueries({ queryKey: ["current-store"] });
 			queryClient.invalidateQueries({ queryKey: ["config-file", "user"] });
@@ -199,7 +200,7 @@ export const useSetUsingConfig = () => {
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.storeActivateFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.storeActivateFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -246,11 +247,12 @@ export const useUpdateConfig = () => {
 		}) => invoke<ConfigStore>("update_config", { storeId, title, settings }),
 		onSuccess: async (data) => {
 			if (data.using) {
-				toast.success(
-					i18n.t("toast.storeSavedAndActive", { title: data.title }),
-				);
+				notifications.show({
+					message: i18n.t("toast.storeSavedAndActive", { title: data.title }),
+					color: "green",
+				});
 			} else {
-				toast.success(i18n.t("toast.storeSaved", { title: data.title }));
+				notifications.show({ message: i18n.t("toast.storeSaved", { title: data.title }), color: "green" });
 			}
 			queryClient.invalidateQueries({ queryKey: ["stores"] });
 			queryClient.invalidateQueries({ queryKey: ["store", data.id] });
@@ -263,7 +265,7 @@ export const useUpdateConfig = () => {
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.storeSaveFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.storeSaveFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -295,13 +297,13 @@ export const useInstallAndRestart = () => {
 			console.log(
 				"✅ Frontend: Update installation completed, preparing to restart",
 			);
-			toast.success(i18n.t("toast.updateInstalled"));
+			notifications.show({ message: i18n.t("toast.updateInstalled"), color: "green" });
 		},
 		onError: (error) => {
 			console.log("❌ Frontend: Update installation failed", error);
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.updateInstallFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.updateInstallFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -328,13 +330,13 @@ export const useUpdateGlobalMcpServer = () => {
 		}) =>
 			invoke<void>("update_global_mcp_server", { serverName, serverConfig }),
 		onSuccess: () => {
-			toast.success("MCP server configuration updated successfully");
+			notifications.show({ message: "MCP server configuration updated successfully", color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["global-mcp-servers"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(`Failed to update MCP server: ${errorMessage}`);
+			notifications.show({ message: `Failed to update MCP server: ${errorMessage}`, color: "red" });
 		},
 	});
 };
@@ -352,13 +354,13 @@ export const useAddGlobalMcpServer = () => {
 		}) =>
 			invoke<void>("update_global_mcp_server", { serverName, serverConfig }),
 		onSuccess: () => {
-			toast.success("MCP server added successfully");
+			notifications.show({ message: "MCP server added successfully", color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["global-mcp-servers"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(`Failed to add MCP server: ${errorMessage}`);
+			notifications.show({ message: `Failed to add MCP server: ${errorMessage}`, color: "red" });
 		},
 	});
 };
@@ -381,13 +383,13 @@ export const useDeleteGlobalMcpServer = () => {
 		mutationFn: (serverName: string) =>
 			invoke<void>("delete_global_mcp_server", { serverName }),
 		onSuccess: () => {
-			toast.success("MCP server deleted successfully");
+			notifications.show({ message: "MCP server deleted successfully", color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["global-mcp-servers"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(`Failed to delete MCP server: ${errorMessage}`);
+			notifications.show({ message: `Failed to delete MCP server: ${errorMessage}`, color: "red" });
 		},
 	});
 };
@@ -434,13 +436,13 @@ export const useWriteClaudeMemory = () => {
 		mutationFn: (content: string) =>
 			invoke<void>("write_claude_memory", { content }),
 		onSuccess: () => {
-			toast.success("Memory saved successfully");
+			notifications.show({ message: "Memory saved successfully", color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["claude-memory"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(`Failed to save memory: ${errorMessage}`);
+			notifications.show({ message: `Failed to save memory: ${errorMessage}`, color: "red" });
 		},
 	});
 };
@@ -479,14 +481,14 @@ export const useWriteClaudeConfigFile = () => {
 		mutationFn: (content: unknown) =>
 			invoke<void>("write_claude_config_file", { content }),
 		onSuccess: () => {
-			toast.success("Claude configuration saved successfully");
+			notifications.show({ message: "Claude configuration saved successfully", color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["claude-config-file"] });
 			queryClient.invalidateQueries({ queryKey: ["claude-projects"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(`Failed to save Claude configuration: ${errorMessage}`);
+			notifications.show({ message: `Failed to save Claude configuration: ${errorMessage}`, color: "red" });
 		},
 	});
 };
@@ -509,13 +511,13 @@ export const useUpdateNotificationSettings = () => {
 			return invoke<void>("update_notification_settings", { settings });
 		},
 		onSuccess: () => {
-			toast.success("Notification settings updated successfully");
+			notifications.show({ message: "Notification settings updated successfully", color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["notification-settings"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(`Failed to update notification settings: ${errorMessage}`);
+			notifications.show({ message: `Failed to update notification settings: ${errorMessage}`, color: "red" });
 		},
 	});
 };
@@ -539,13 +541,13 @@ export const useWriteClaudeCommand = () => {
 			content: string;
 		}) => invoke<void>("write_claude_command", { commandName, content }),
 		onSuccess: () => {
-			toast.success(i18n.t("toast.commandSaved"));
+			notifications.show({ message: i18n.t("toast.commandSaved"), color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["claude-commands"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.commandSaveFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.commandSaveFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -557,13 +559,13 @@ export const useDeleteClaudeCommand = () => {
 		mutationFn: (commandName: string) =>
 			invoke<void>("delete_claude_command", { commandName }),
 		onSuccess: () => {
-			toast.success(i18n.t("toast.commandDeleted"));
+			notifications.show({ message: i18n.t("toast.commandDeleted"), color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["claude-commands"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(i18n.t("toast.commandDeleteFailed", { error: errorMessage }));
+			notifications.show({ message: i18n.t("toast.commandDeleteFailed", { error: errorMessage }), color: "red" });
 		},
 	});
 };
@@ -587,13 +589,13 @@ export const useWriteClaudeAgent = () => {
 			content: string;
 		}) => invoke<void>("write_claude_agent", { agentName, content }),
 		onSuccess: () => {
-			toast.success("Agent saved successfully");
+			notifications.show({ message: "Agent saved successfully", color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["claude-agents"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(`Failed to save agent: ${errorMessage}`);
+			notifications.show({ message: `Failed to save agent: ${errorMessage}`, color: "red" });
 		},
 	});
 };
@@ -605,13 +607,13 @@ export const useDeleteClaudeAgent = () => {
 		mutationFn: (agentName: string) =>
 			invoke<void>("delete_claude_agent", { agentName }),
 		onSuccess: () => {
-			toast.success("Agent deleted successfully");
+			notifications.show({ message: "Agent deleted successfully", color: "green" });
 			queryClient.invalidateQueries({ queryKey: ["claude-agents"] });
 		},
 		onError: (error) => {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
-			toast.error(`Failed to delete agent: ${errorMessage}`);
+			notifications.show({ message: `Failed to delete agent: ${errorMessage}`, color: "red" });
 		},
 	});
 };

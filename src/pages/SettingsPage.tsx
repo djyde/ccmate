@@ -1,161 +1,177 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { DownloadIcon, ExternalLinkIcon, RotateCwIcon } from "lucide-react";
-import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaXTwitter } from "react-icons/fa6";
 import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+  ActionIcon,
+  Button,
+  Group,
+  NativeSelect,
+  Text,
+} from "@mantine/core";
+import { useMantineColorScheme } from "@mantine/core";
 import { useCheckForUpdates, useInstallAndRestart } from "@/lib/query";
 
+function SettingRow({
+  label,
+  description,
+  children,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between py-2.5">
+      <div className="min-w-0 mr-4">
+        <Text size="sm">{label}</Text>
+        {description && (
+          <Text size="xs" c="dimmed" mt={2}>
+            {description}
+          </Text>
+        )}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  );
+}
+
 export function SettingsPage() {
-	const { t, i18n } = useTranslation();
-	const { theme, setTheme } = useTheme();
+  const { t, i18n } = useTranslation();
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
 
-	const { data: updateInfo, isLoading: checkingUpdate } = useCheckForUpdates();
-	const { mutate: installUpdate, isPending: installingUpdate } =
-		useInstallAndRestart();
-	const [version, setVersion] = useState<string>("");
+  const { data: updateInfo, isLoading: checkingUpdate } = useCheckForUpdates();
+  const { mutate: installUpdate, isPending: installingUpdate } =
+    useInstallAndRestart();
+  const [version, setVersion] = useState<string>("");
 
-	useEffect(() => {
-		getVersion().then(setVersion);
-	}, []);
+  useEffect(() => {
+    getVersion().then(setVersion);
+  }, []);
 
-	const handleLanguageChange = (language: string) => {
-		i18n.changeLanguage(language);
-	};
+  const handleLanguageChange = (language: string) => {
+    i18n.changeLanguage(language);
+  };
 
-	const handleInstallUpdate = () => {
-		installUpdate();
-	};
+  const handleInstallUpdate = () => {
+    installUpdate();
+  };
 
-	return (
-		<div>
-			<PageHeader title={t("settings.title")} />
-			<div className="space-y-6 px-5">
-				<div>
-					<label className="block text-sm font-medium mb-2 mx-2">
-						{t("settings.language")}
-					</label>
-					<Select value={i18n.language} onValueChange={handleLanguageChange}>
-						<SelectTrigger className="w-[150px]">
-							<SelectValue placeholder={t("settings.language")} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="en">English</SelectItem>
-							<SelectItem value="zh-CN">中文</SelectItem>
-							<SelectItem value="fr">Français</SelectItem>
-							<SelectItem value="ja">日本語</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
+  return (
+    <div>
+      <PageHeader title={t("settings.title")} />
+      <div className="px-5">
+        <SettingRow label={t("settings.language")}>
+          <NativeSelect
+            size="xs"
+            value={i18n.language}
+            onChange={(e) => handleLanguageChange(e.currentTarget.value)}
+            data={[
+              { label: "English", value: "en" },
+              { label: "中文", value: "zh-CN" },
+              { label: "Français", value: "fr" },
+              { label: "日本語", value: "ja" },
+            ]}
+            w={140}
+          />
+        </SettingRow>
 
-				<div>
-					<label className="block text-sm font-medium mb-2 mx-2">
-						{t("settings.theme")}
-					</label>
-					<Select value={theme || "system"} onValueChange={setTheme}>
-						<SelectTrigger className="w-[150px]">
-							<SelectValue placeholder={t("settings.theme")} />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="system">
-								{t("settings.theme.system")}
-							</SelectItem>
-							<SelectItem value="light">{t("settings.theme.light")}</SelectItem>
-							<SelectItem value="dark">{t("settings.theme.dark")}</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
+        <SettingRow label={t("settings.theme")}>
+          <NativeSelect
+            size="xs"
+            value={colorScheme}
+            onChange={(e) => setColorScheme(e.currentTarget.value as "light" | "dark" | "auto")}
+            data={[
+              { label: t("settings.theme.system"), value: "auto" },
+              { label: t("settings.theme.light"), value: "light" },
+              { label: t("settings.theme.dark"), value: "dark" },
+            ]}
+            w={140}
+          />
+        </SettingRow>
 
-				<div>
-					<label className="block text-sm font-medium mb-2 mx-2">
-						{t("settings.version")}
-					</label>
-					<div className="flex items-center gap-2 mx-2">
-						<p className="text-sm text-muted-foreground">v{version}</p>
-						{checkingUpdate ? (
-							<Button variant="outline" size="sm" disabled>
-								<RotateCwIcon className="w-4 h-4 animate-spin" />
-								{t("settings.checkingUpdate")}
-							</Button>
-						) : updateInfo?.available ? (
-							<div className="flex items-center gap-2">
-								<span className="text-sm text-green-600 font-medium">
-									{t("settings.newVersionAvailable", {
-										version: updateInfo.version,
-									})}
-								</span>
-								<Button
-									onClick={handleInstallUpdate}
-									disabled={installingUpdate}
-									variant="default"
-									size="sm"
-								>
-									{installingUpdate ? (
-										<>
-											<RotateCwIcon className="w-4 h-4 animate-spin mr-1" />
-											{t("settings.installing")}
-										</>
-									) : (
-										<>
-											<DownloadIcon className="w-4 h-4 mr-1" />
-											{t("settings.installAndRestart")}
-										</>
-									)}
-								</Button>
-							</div>
-						) : (
-							<span className="text-sm text-muted-foreground">
-								{t("settings.upToDate")}
-							</span>
-						)}
-					</div>
-					{updateInfo?.body && (
-						<p className="text-xs text-muted-foreground mx-2 mt-1">
-							{updateInfo.body}
-						</p>
-					)}
-				</div>
+        <SettingRow label={t("settings.version")}>
+          <Group gap="sm">
+            <Text size="xs" c="dimmed">
+              v{version}
+            </Text>
+            {checkingUpdate ? (
+              <Group gap={6}>
+                <RotateCwIcon className="w-3 h-3 animate-spin text-[var(--mantine-color-dimmed)]" />
+                <Text size="xs" c="dimmed">
+                  {t("settings.checkingUpdate")}
+                </Text>
+              </Group>
+            ) : updateInfo?.available ? (
+              <Group gap="xs">
+                <Text size="xs" c="green">
+                  {t("settings.newVersionAvailable", {
+                    version: updateInfo.version,
+                  })}
+                </Text>
+                <Button
+                  onClick={handleInstallUpdate}
+                  disabled={installingUpdate}
+                  size="compact-xs"
+                  variant="light"
+                  leftSection={
+                    installingUpdate ? (
+                      <RotateCwIcon className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <DownloadIcon className="w-3 h-3" />
+                    )
+                  }
+                >
+                  {installingUpdate
+                    ? t("settings.installing")
+                    : t("settings.installAndRestart")}
+                </Button>
+              </Group>
+            ) : (
+              <Text size="xs" c="dimmed">
+                {t("settings.upToDate")}
+              </Text>
+            )}
+          </Group>
+        </SettingRow>
 
-				<div>
-					<label className="block text-sm font-medium mb-2 mx-2">
-						{t("settings.contact")}
-					</label>
-					<div className="flex items-center gap-2">
-						<Button
-							onClick={(_) => {
-								openUrl("https://github.com/djyde/ccmate/issues");
-							}}
-							variant="outline"
-							size="sm"
-							className="text-sm"
-						>
-							<ExternalLinkIcon />
-							{t("settings.reportIssue")}
-						</Button>
+        {updateInfo?.body && (
+          <Text size="xs" c="dimmed" py="xs">
+            {updateInfo.body}
+          </Text>
+        )}
 
-						<Button
-							onClick={(_) => {
-								openUrl("https://x.com/randyloop");
-							}}
-							variant="ghost"
-							size="sm"
-							className="text-sm"
-						>
-							<FaXTwitter />
-						</Button>
-					</div>
-				</div>
-			</div>
-		</div>
-	);
+        <SettingRow label={t("settings.contact")}>
+          <Group gap="xs">
+            <Button
+              component="a"
+              onClick={(e) => {
+                e.preventDefault();
+                openUrl(
+                  "https://github.com/djyde/ccmate/issues",
+                );
+              }}
+              variant="default"
+              size="compact-xs"
+              leftSection={<ExternalLinkIcon className="w-3 h-3" />}
+            >
+              {t("settings.reportIssue")}
+            </Button>
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              color="gray"
+              onClick={() => openUrl("https://x.com/randyloop")}
+              aria-label="X (Twitter)"
+            >
+              <FaXTwitter size={13} />
+            </ActionIcon>
+          </Group>
+        </SettingRow>
+      </div>
+    </div>
+  );
 }

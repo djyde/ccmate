@@ -1,15 +1,8 @@
 import { CircleQuestionMarkIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
 import { GLMDialog } from "./GLMDialog";
-import { Button } from "./ui/button";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "./ui/tooltip";
+import { Button, Paper, Text, Tooltip } from "@mantine/core";
 
 export { GLMDialog } from "./GLMDialog";
 
@@ -34,39 +27,33 @@ export function GLMBanner(props: {
 	}
 
 	return (
-		<div
-			className={cn("bg-card rounded-md p-2 border space-y-2", props.className)}
+		<Paper
+			withBorder
+			p="xs"
+			radius="md"
+			className={props.className}
 		>
-			<h3 className="text-card-foreground text-sm font-medium flex items-center gap-2">
+			<Text size="sm" fw={500} mb="xs" className="flex items-center gap-2">
 				{t("glm.title")}
-				<TooltipProvider>
-					<Tooltip delayDuration={100}>
-						<TooltipTrigger>
-							<CircleQuestionMarkIcon
-								size={14}
-								className="text-muted-foreground"
-							/>
-						</TooltipTrigger>
-						<TooltipContent className="w-[200px]">
-							<p className="font-normal">{t("glm.tooltip")}</p>
-						</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
-			</h3>
+				<Tooltip label={t("glm.tooltip")} w={200} multiline openDelay={100}>
+					<CircleQuestionMarkIcon
+						size={14}
+						style={{ color: "var(--mantine-color-dimmed)", cursor: "help" }}
+					/>
+				</Tooltip>
+			</Text>
 			<div className="flex items-center gap-1">
 				<Button
-					size="sm"
+					size="xs"
 					variant="outline"
-					className="text-sm"
 					onClick={() => setGlmOpen(true)}
 				>
 					{t("glm.startConfig")}
 				</Button>
 				{!props.hideCloseButton && (
 					<Button
-						size="sm"
-						variant="ghost"
-						className="text-sm"
+						size="xs"
+						variant="subtle"
 						onClick={handleDismiss}
 					>
 						{t("glm.close")}
@@ -78,6 +65,6 @@ export function GLMBanner(props: {
 				onClose={() => setGlmOpen(false)}
 				onSuccess={handleDismiss}
 			/>
-		</div>
+		</Paper>
 	);
 }

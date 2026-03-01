@@ -1,7 +1,6 @@
 import { AlertCircle } from "lucide-react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { Button } from "./ui/button";
+import { Alert, Button, Code, Paper, Text } from "@mantine/core";
 
 interface Props {
 	children: ReactNode;
@@ -55,33 +54,43 @@ export class ErrorBoundary extends Component<Props, State> {
 	render() {
 		if (this.state.hasError) {
 			return (
-				<div className="min-h-screen flex items-center justify-center bg-background p-4">
+				<div className="min-h-screen flex items-center justify-center p-4">
 					<div className="max-w-2xl w-full space-y-4">
-						<Alert variant="destructive">
-							<AlertCircle className="h-4 w-4" />
-							<AlertTitle>Something went wrong</AlertTitle>
-							<AlertDescription className="mt-2">
-								<div className="font-medium mb-1 select-text">
-									{this.state.error?.message || "An unexpected error occurred"}
-								</div>
-								<div className="text-sm opacity-90 select-text">
-									Please try reloading the page or return to the home page.
-								</div>
-							</AlertDescription>
+						<Alert
+							color="red"
+							icon={<AlertCircle className="h-4 w-4" />}
+							title="Something went wrong"
+						>
+							<Text size="sm" fw={500} mb={4} style={{ userSelect: "text" }}>
+								{this.state.error?.message || "An unexpected error occurred"}
+							</Text>
+							<Text size="sm" opacity={0.9} style={{ userSelect: "text" }}>
+								Please try reloading the page or return to the home page.
+							</Text>
 						</Alert>
 
 						{this.state.error && (
-							<div className="bg-muted p-4 rounded-lg">
-								<h3 className="font-semibold mb-2 text-sm">Stack Trace:</h3>
-								<pre className="text-xs overflow-auto max-h-60 text-muted-foreground whitespace-pre-wrap break-words select-text cursor-text">
+							<Paper p="md" radius="md" bg="var(--mantine-color-default-hover)">
+								<Text size="sm" fw={600} mb="xs">Stack Trace:</Text>
+								<Code
+									block
+									style={{
+										maxHeight: 240,
+										overflow: "auto",
+										userSelect: "text",
+										cursor: "text",
+										whiteSpace: "pre-wrap",
+										wordBreak: "break-word",
+									}}
+								>
 									{this.state.error.stack || this.state.error.toString()}
 									{this.state.errorInfo?.componentStack}
-								</pre>
-							</div>
+								</Code>
+							</Paper>
 						)}
 
 						<div className="flex gap-3">
-							<Button onClick={this.handleReset} variant="default">
+							<Button onClick={this.handleReset}>
 								Go to Home
 							</Button>
 							<Button onClick={this.handleReload} variant="outline">

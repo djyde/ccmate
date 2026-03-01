@@ -1,87 +1,109 @@
-import { ChevronDownIcon, FolderIcon } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Button } from "../../components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
+import { Combobox, Group, InputBase, Text, useCombobox } from "@mantine/core";
+import { useMemo, useState } from "react";
 import type { ProjectConfig } from "../../lib/query";
 
 interface ProjectSelectorProps {
 	projects: ProjectConfig[];
+	currentPath: string;
+	onSelect: (path: string) => void;
 }
 
-export function ProjectSelector({ projects }: ProjectSelectorProps) {
-	const navigate = useNavigate();
-	const location = useLocation();
+export function ProjectSelector({
+	projects,
+	currentPath,
+	onSelect,
+}: ProjectSelectorProps) {
+	const [search, setSearch] = useState("");
+	const combobox = useCombobox({
+		onDropdownClose: () => {
+			combobox.resetSelectedOption();
+			setSearch("");
+		},
+	});
 
-	// Get the current project path from the URL
-	const currentProjectPath = location.pathname.startsWith("/projects/")
-		? decodeURIComponent(location.pathname.replace("/projects/", ""))
-		: null;
+	const filtered = useMemo(() => {
+		const q = search.toLowerCase().trim();
+		if (!q) return projects;
+		return projects.filter((p) => p.path.toLowerCase().includes(q));
+	}, [projects, search]);
 
-	// Find the current project
-	const currentProject = currentProjectPath
-		? projects.find((p) => p.path === currentProjectPath)
-		: null;
-
-	const handleProjectSelect = (projectPath: string) => {
-		const encodedPath = encodeURIComponent(projectPath);
-		navigate(`/projects/${encodedPath}`);
-	};
+	const currentProject = projects.find((p) => p.path === currentPath);
+	const displayName = currentProject
+		? currentProject.path.split("/").pop() || currentProject.path
+		: "Select project";
 
 	return (
-		<div
-			className="flex items-center px-5 pt-5 pb-3 bg-background/80 backdrop-blur-md sticky top-0 z-10"
-			data-tauri-drag-region
+		<Combobox
+			store={combobox}
+			onOptionSubmit={(val) => {
+				onSelect(val);
+				combobox.closeDropdown();
+			}}
+			withinPortal={false}
 		>
-			<div className="flex items-center gap-2 flex-1" data-tauri-drag-region>
-				<h3 className="text-base font-semibold tracking-tight" data-tauri-drag-region>
-					Projects
-				</h3>
-			</div>
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button
-						variant="outline"
-						className="flex items-center gap-2 min-w-[200px] justify-between"
-					>
-						<div className="flex items-center gap-2 truncate">
-							<FolderIcon className="h-4 w-4 flex-shrink-0" />
-							<span className="truncate">
-								{currentProject
-									? currentProject.path.split("/").pop() || currentProject.path
-									: "Select Project"}
-							</span>
-						</div>
-						<ChevronDownIcon className="h-4 w-4 flex-shrink-0" />
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent
-					align="end"
-					className="min-w-[250px] max-h-[300px] overflow-y-auto"
+			<Combobox.Target>
+				<InputBase
+					component="button"
+					type="button"
+					pointer
+					rightSection={<Combobox.Chevron />}
+					rightSectionPointerEvents="none"
+					onClick={() => combobox.toggleDropdown()}
+					size="xs"
+					styles={{
+						input: {
+							fontWeight: 500,
+							fontSize: 13,
+							border: "none",
+							background: "transparent",
+							minWidth: 320,
+						},
+					}}
 				>
-					{projects.map((project) => (
-						<DropdownMenuItem
-							key={project.path}
-							onClick={() => handleProjectSelect(project.path)}
-							className="flex items-center gap-2 cursor-pointer"
-						>
-							<FolderIcon className="h-4 w-4" />
-							<div className="flex flex-col truncate">
-								<span className="truncate font-medium">
-									{project.path.split("/").pop() || project.path}
-								</span>
-								<span className="text-xs text-muted-foreground truncate">
-									{project.path}
-								</span>
-							</div>
-						</DropdownMenuItem>
-					))}
-				</DropdownMenuContent>
-			</DropdownMenu>
-		</div>
+					{displayName}
+				</InputBase>
+			</Combobox.Target>
+
+			<Combobox.Dropdown>
+				<Combobox.Search
+					value={search}
+					onChange={(e) => {
+						setSearch(e.currentTarget.value);
+						combobox.updateSelectedOptionIndex("active");
+					}}
+					placeholder="Search projects..."
+				/>
+				<Combobox.Options mah={280} style={{ overflowY: "auto" }}>
+					{filtered.length === 0 ? (
+						<Combobox.Empty>No projects found</Combobox.Empty>
+					) : (
+						filtered.map((proj) => (
+							<Combobox.Option
+								value={proj.path}
+								key={proj.path}
+								active={proj.path === currentPath}
+							>
+								<Group gap="xs" wrap="nowrap">
+									<div style={{ flex: 1, minWidth: 0 }}>
+										<Text size="sm" fw={500} truncate>
+											{proj.path.split("/").pop() ||
+												proj.path}
+										</Text>
+										<Text
+											size="xs"
+											c="dimmed"
+											truncate
+											lh={1.4}
+										>
+											{proj.path}
+										</Text>
+									</div>
+								</Group>
+							</Combobox.Option>
+						))
+					)}
+				</Combobox.Options>
+			</Combobox.Dropdown>
+		</Combobox>
 	);
 }

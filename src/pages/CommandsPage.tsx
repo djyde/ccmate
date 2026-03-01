@@ -2,28 +2,25 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { yamlFrontmatter } from "@codemirror/lang-yaml";
 import { ask, message } from "@tauri-apps/plugin-dialog";
 import CodeMirror, { EditorView } from "@uiw/react-codemirror";
-import { PlusIcon, SaveIcon, TerminalIcon, TrashIcon } from "lucide-react";
+import { PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
 import { Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useDisclosure } from "@mantine/hooks";
+import {
+	ActionIcon,
+	Box,
+	Button,
+	Center,
+	Group,
+	Loader,
+	Modal,
+	Stack,
+	Text,
+	TextInput,
+	Tooltip,
+	UnstyledButton,
+} from "@mantine/core";
 import { PageHeader } from "@/components/PageHeader";
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	useClaudeCommands,
 	useDeleteClaudeCommand,
@@ -31,48 +28,62 @@ import {
 } from "@/lib/query";
 import { useCodeMirrorTheme } from "@/lib/use-codemirror-theme";
 
+interface EditingCommand {
+	name: string;
+	content: string;
+}
+
 function CommandsPageContent() {
 	const { t } = useTranslation();
 	const { data: commands, isLoading, error } = useClaudeCommands();
 	const writeCommand = useWriteClaudeCommand();
 	const deleteCommand = useDeleteClaudeCommand();
-	const [commandEdits, setCommandEdits] = useState<Record<string, string>>({});
-	const [isDialogOpen, setIsDialogOpen] = useState(false);
+	const [createOpened, { open: openCreate, close: closeCreate }] =
+		useDisclosure(false);
+	const [editing, setEditing] = useState<EditingCommand | null>(null);
+	const [editContent, setEditContent] = useState("");
 	const codeMirrorTheme = useCodeMirrorTheme();
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center">{t("loading")}</div>
-			</div>
+			<Center h="100vh">
+				<Loader size="sm" color="gray" />
+			</Center>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<div className="text-center text-red-500">
+			<Center h="100vh">
+				<Text size="sm" c="red.6">
 					{t("commands.error", { error: error.message })}
-				</div>
-			</div>
+				</Text>
+			</Center>
 		);
 	}
 
-	const handleContentChange = (commandName: string, content: string) => {
-		setCommandEdits((prev) => ({
-			...prev,
-			[commandName]: content,
-		}));
+	const openEditor = (command: { name: string; content: string }) => {
+		setEditing({ name: command.name, content: command.content });
+		setEditContent(command.content);
 	};
 
-	const handleSaveCommand = async (commandName: string) => {
-		const content = commandEdits[commandName];
-		if (content === undefined) return;
+	const closeEditor = () => {
+		setEditing(null);
+		setEditContent("");
+	};
 
-		writeCommand.mutate({
-			commandName,
-			content,
-		});
+	const hasChanges = editing !== null && editContent !== editing.content;
+
+	const handleSaveCommand = () => {
+		if (!editing || !hasChanges) return;
+		writeCommand.mutate(
+			{ commandName: editing.name, content: editContent },
+			{
+				onSuccess: () => {
+					closeEditor();
+				},
+			},
+		);
 	};
 
 	const handleDeleteCommand = async (commandName: string) => {
@@ -83,150 +94,180 @@ function CommandsPageContent() {
 
 		if (confirmed) {
 			deleteCommand.mutate(commandName);
+			if (editing?.name === commandName) {
+				closeEditor();
+			}
 		}
 	};
 
 	return (
-		<div className="">
+		<Box style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+			{/* Create modal */}
+			<Modal
+				opened={createOpened}
+				onClose={closeCreate}
+				title={t("commands.addCommandTitle")}
+				size="lg"
+				centered
+				overlayProps={{ backgroundOpacity: 0.4, blur: 4 }}
+			>
+				<Text size="sm" c="dimmed" mb="md">
+					{t("commands.addCommandDescription")}
+				</Text>
+				<CreateCommandPanel onClose={closeCreate} />
+			</Modal>
+
+			{/* Edit modal */}
+			<Modal
+				opened={editing !== null}
+				onClose={closeEditor}
+				title={editing?.name}
+				size="lg"
+				centered
+				overlayProps={{ backgroundOpacity: 0.4, blur: 4 }}
+			>
+				{editing && (
+					<Stack gap="md">
+						<Box
+							style={{
+								borderRadius: "var(--mantine-radius-md)",
+								overflow: "hidden",
+								border: "1px solid var(--mantine-color-default-border)",
+							}}
+						>
+							<CodeMirror
+								value={editContent}
+								height="280px"
+								theme={codeMirrorTheme}
+								onChange={setEditContent}
+								placeholder={t("commands.contentPlaceholder")}
+								extensions={[
+									yamlFrontmatter({
+										content: markdown({
+											base: markdownLanguage,
+										}),
+									}),
+									EditorView.lineWrapping,
+								]}
+								basicSetup={{
+									lineNumbers: false,
+									highlightActiveLineGutter: true,
+									foldGutter: false,
+									dropCursor: false,
+									allowMultipleSelections: false,
+									indentOnInput: true,
+									bracketMatching: true,
+									closeBrackets: true,
+									autocompletion: true,
+									highlightActiveLine: true,
+									highlightSelectionMatches: true,
+									searchKeymap: false,
+								}}
+							/>
+						</Box>
+						<Group justify="space-between">
+							<Tooltip label={t("commands.deleteTitle")} position="bottom">
+								<ActionIcon
+									variant="subtle"
+									color="red"
+									size="md"
+									onClick={() => handleDeleteCommand(editing.name)}
+									disabled={deleteCommand.isPending}
+									style={{ opacity: 0.5 }}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.opacity = "1";
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.opacity = "0.5";
+									}}
+								>
+									<TrashIcon size={16} />
+								</ActionIcon>
+							</Tooltip>
+
+							<Tooltip
+								label={`${t("commands.save")} (⌘S)`}
+								position="bottom"
+							>
+								<ActionIcon
+									variant={hasChanges ? "filled" : "subtle"}
+									color={hasChanges ? "brand" : "gray"}
+									size="md"
+									onClick={handleSaveCommand}
+									disabled={!hasChanges || writeCommand.isPending}
+									loading={writeCommand.isPending}
+								>
+									<SaveIcon size={16} />
+								</ActionIcon>
+							</Tooltip>
+						</Group>
+					</Stack>
+				)}
+			</Modal>
+
 			<PageHeader
 				title={t("commands.title")}
 				description={t("commands.description")}
 				actions={
-					<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-						<DialogTrigger asChild>
-							<Button
-								variant="ghost"
-								className="text-muted-foreground"
-								size="sm"
-							>
-								<PlusIcon size={14} />
-								{t("commands.addCommand")}
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="max-w-[600px]">
-							<DialogHeader>
-								<DialogTitle className="">
-									{t("commands.addCommandTitle")}
-								</DialogTitle>
-								<DialogDescription className="text-muted-foreground text-sm">
-									{t("commands.addCommandDescription")}
-								</DialogDescription>
-							</DialogHeader>
-							<CreateCommandPanel onClose={() => setIsDialogOpen(false)} />
-						</DialogContent>
-					</Dialog>
+					<Tooltip label={t("commands.addCommand")} position="bottom">
+						<ActionIcon
+							variant="subtle"
+							color="gray"
+							size="md"
+							onClick={openCreate}
+						>
+							<PlusIcon size={16} />
+						</ActionIcon>
+					</Tooltip>
 				}
 			/>
-			<div className="">
-				{!commands || commands.length === 0 ? (
-					<div className="text-center text-muted-foreground py-8">
-						{t("commands.noCommands")}
-					</div>
-				) : (
-					<ScrollArea className="h-full">
-						<div className="">
-							<Accordion type="multiple" className="">
-								{commands.map((command) => (
-									<AccordionItem
-										key={command.name}
-										value={command.name}
-										className="bg-card"
-									>
-										<AccordionTrigger className="hover:no-underline px-4 py-2 bg-card hover:bg-accent duration-150">
-											<div className="flex items-center gap-2">
-												<TerminalIcon size={12} />
-												<span className="font-medium">{command.name}</span>
-												<span className="text-sm text-muted-foreground font-normal">
-													{`~/.claude/commands/${command.name}.md`}
-												</span>
-											</div>
-										</AccordionTrigger>
-										<AccordionContent className="pb-3">
-											<div className="px-3 pt-3 space-y-3">
-												<div className="rounded-lg overflow-hidden border">
-													<CodeMirror
-														value={
-															commandEdits[command.name] !== undefined
-																? commandEdits[command.name]
-																: command.content
-														}
-														height="180px"
-														theme={codeMirrorTheme}
-														onChange={(value) =>
-															handleContentChange(command.name, value)
-														}
-														placeholder={t("commands.contentPlaceholder")}
-														extensions={[
-															yamlFrontmatter({
-																content: markdown({
-																	base: markdownLanguage,
-																}),
-															}),
-															EditorView.lineWrapping,
-														]}
-														basicSetup={{
-															lineNumbers: false,
-															highlightActiveLineGutter: true,
-															foldGutter: false,
-															dropCursor: false,
-															allowMultipleSelections: false,
-															indentOnInput: true,
-															bracketMatching: true,
-															closeBrackets: true,
-															autocompletion: true,
-															highlightActiveLine: true,
-															highlightSelectionMatches: true,
-															searchKeymap: false,
-														}}
-													/>
-												</div>
-												<div className="flex justify-between bg-card">
-													<Button
-														variant="outline"
-														onClick={() => handleSaveCommand(command.name)}
-														disabled={
-															writeCommand.isPending ||
-															commandEdits[command.name] === undefined
-														}
-														size="sm"
-													>
-														<SaveIcon size={14} className="" />
-														{writeCommand.isPending
-															? t("commands.saving")
-															: t("commands.save")}
-													</Button>
 
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => handleDeleteCommand(command.name)}
-														disabled={deleteCommand.isPending}
-													>
-														<TrashIcon size={14} className="" />
-													</Button>
-												</div>
-											</div>
-										</AccordionContent>
-									</AccordionItem>
-								))}
-							</Accordion>
-						</div>
-					</ScrollArea>
+			{/* Command list */}
+			<Box px="lg" pb="lg" style={{ flex: 1, overflow: "auto" }}>
+				{!commands || commands.length === 0 ? (
+					<Center py="xl">
+						<Text size="sm" c="dimmed">
+							{t("commands.noCommands")}
+						</Text>
+					</Center>
+				) : (
+					<Stack gap={4}>
+						{commands.map((command) => (
+							<UnstyledButton
+								key={command.name}
+								onClick={() => openEditor(command)}
+								py="sm"
+								px="xs"
+							>
+								<Group justify="space-between" align="center">
+									<Box>
+										<Text size="sm" fw={500}>
+											{command.name}
+										</Text>
+										<Text size="xs" c="dimmed">
+											{`~/.claude/commands/${command.name}.md`}
+										</Text>
+									</Box>
+									<Text size="xs" c="dimmed">
+										{command.content.split("\n").length} lines
+									</Text>
+								</Group>
+							</UnstyledButton>
+						))}
+					</Stack>
 				)}
-			</div>
-		</div>
+			</Box>
+		</Box>
 	);
 }
 
 export function CommandsPage() {
-	const { t } = useTranslation();
-
 	return (
 		<Suspense
 			fallback={
-				<div className="flex items-center justify-center min-h-screen">
-					<div className="text-center">{t("loading")}</div>
-				</div>
+				<Center h="100vh">
+					<Loader size="sm" color="gray" />
+				</Center>
 			}
 		>
 			<CommandsPageContent />
@@ -243,7 +284,6 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
 	const codeMirrorTheme = useCodeMirrorTheme();
 
 	const handleCreateCommand = async () => {
-		// Validate command name
 		if (!commandName.trim()) {
 			await message(t("commands.emptyNameError"), {
 				title: t("commands.validationError"),
@@ -252,7 +292,6 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
 			return;
 		}
 
-		// Check if command already exists
 		const exists = commands && commands.some((cmd) => cmd.name === commandName);
 		if (exists) {
 			await message(t("commands.commandExistsError", { commandName }), {
@@ -262,7 +301,6 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
 			return;
 		}
 
-		// Validate content
 		if (!commandContent.trim()) {
 			await message(t("commands.emptyContentError"), {
 				title: t("commands.validationError"),
@@ -287,20 +325,25 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
 	};
 
 	return (
-		<div className="space-y-4 mt-4">
-			<div className="space-y-2">
-				<Label htmlFor="command-name">{t("commands.commandName")}</Label>
-				<Input
-					id="command-name"
-					value={commandName}
-					onChange={(e) => setCommandName(e.target.value)}
-					placeholder={t("commands.commandNamePlaceholder")}
-				/>
-			</div>
+		<Stack gap="md">
+			<TextInput
+				label={t("commands.commandName")}
+				value={commandName}
+				onChange={(e) => setCommandName(e.currentTarget.value)}
+				placeholder={t("commands.commandNamePlaceholder")}
+			/>
 
-			<div className="space-y-2">
-				<Label htmlFor="command-content">{t("commands.commandContent")}</Label>
-				<div className="rounded-lg overflow-hidden border">
+			<Box>
+				<Text size="sm" fw={500} mb={4}>
+					{t("commands.commandContent")}
+				</Text>
+				<Box
+					style={{
+						borderRadius: "var(--mantine-radius-md)",
+						overflow: "hidden",
+						border: "1px solid var(--mantine-color-default-border)",
+					}}
+				>
 					<CodeMirror
 						value={commandContent}
 						onChange={(value) => setCommandContent(value)}
@@ -330,10 +373,10 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
 							searchKeymap: false,
 						}}
 					/>
-				</div>
-			</div>
+				</Box>
+			</Box>
 
-			<div className="flex justify-end">
+			<Group justify="flex-end">
 				<Button
 					onClick={handleCreateCommand}
 					disabled={
@@ -341,12 +384,11 @@ function CreateCommandPanel({ onClose }: { onClose?: () => void }) {
 						!commandContent.trim() ||
 						writeCommand.isPending
 					}
+					loading={writeCommand.isPending}
 				>
-					{writeCommand.isPending
-						? t("commands.creating")
-						: t("commands.create")}
+					{t("commands.create")}
 				</Button>
-			</div>
-		</div>
+			</Group>
+		</Stack>
 	);
 }

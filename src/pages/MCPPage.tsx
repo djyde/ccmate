@@ -4,7 +4,6 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import CodeMirror from "@uiw/react-codemirror";
 import {
 	ExternalLinkIcon,
-	HammerIcon,
 	PlusIcon,
 	SaveIcon,
 	TrashIcon,
@@ -12,22 +11,21 @@ import {
 import { Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { match } from "ts-pattern";
+import { useDisclosure } from "@mantine/hooks";
+import {
+	ActionIcon,
+	Box,
+	Button,
+	Center,
+	Group,
+	Loader,
+	Modal,
+	Stack,
+	Text,
+	Tooltip,
+	UnstyledButton,
+} from "@mantine/core";
 import { PageHeader } from "@/components/PageHeader";
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
 import { builtInMcpServers } from "@/lib/builtInMCP";
 import {
 	type McpServer,
@@ -38,36 +36,57 @@ import {
 } from "@/lib/query";
 import { useCodeMirrorTheme } from "@/lib/use-codemirror-theme";
 
+interface EditingServer {
+	name: string;
+	config: string;
+}
+
 function MCPPageContent() {
 	const { t } = useTranslation();
 	const { data: mcpServers } = useGlobalMcpServers();
 	const updateMcpServer = useUpdateGlobalMcpServer();
 	const deleteMcpServer = useDeleteGlobalMcpServer();
-	const [serverConfigs, setServerConfigs] = useState<Record<string, string>>(
-		{},
-	);
-	const [isDialogOpen, setIsDialogOpen] = useState(false);
+	const [createOpened, { open: openCreate, close: closeCreate }] =
+		useDisclosure(false);
+	const [editing, setEditing] = useState<EditingServer | null>(null);
+	const [editContent, setEditContent] = useState("");
 	const codeMirrorTheme = useCodeMirrorTheme();
 
-	const handleConfigChange = (serverName: string, configText: string) => {
-		setServerConfigs((prev) => ({
-			...prev,
-			[serverName]: configText,
-		}));
+	const formatConfigForDisplay = (server: McpServer): string => {
+		return JSON.stringify(server, null, 2);
 	};
 
-	const handleSaveConfig = async (serverName: string) => {
-		const configText = serverConfigs[serverName];
-		if (!configText) return;
+	const openEditor = (serverName: string, serverConfig: McpServer) => {
+		const configStr = formatConfigForDisplay(serverConfig);
+		setEditing({ name: serverName, config: configStr });
+		setEditContent(configStr);
+	};
+
+	const closeEditor = () => {
+		setEditing(null);
+		setEditContent("");
+	};
+
+	const hasChanges = editing !== null && editContent !== editing.config;
+
+	const handleSaveConfig = async () => {
+		if (!editing || !hasChanges) return;
 
 		try {
-			const configObject = JSON.parse(configText);
-			updateMcpServer.mutate({
-				serverName,
-				serverConfig: configObject,
-			});
+			const configObject = JSON.parse(editContent);
+			updateMcpServer.mutate(
+				{
+					serverName: editing.name,
+					serverConfig: configObject,
+				},
+				{
+					onSuccess: () => {
+						closeEditor();
+					},
+				},
+			);
 		} catch (error) {
-			await message(t("mcp.invalidJsonError", { serverName }), {
+			await message(t("mcp.invalidJsonError", { serverName: editing.name }), {
 				title: t("mcp.invalidJsonTitle"),
 				kind: "error",
 			});
@@ -75,7 +94,6 @@ function MCPPageContent() {
 	};
 
 	const handleDeleteServer = async (serverName: string) => {
-		// Show confirmation dialog
 		const confirmed = await ask(t("mcp.deleteServerConfirm", { serverName }), {
 			title: t("mcp.deleteServerTitle"),
 			kind: "warning",
@@ -83,11 +101,10 @@ function MCPPageContent() {
 
 		if (confirmed) {
 			deleteMcpServer.mutate(serverName);
+			if (editing?.name === serverName) {
+				closeEditor();
+			}
 		}
-	};
-
-	const formatConfigForDisplay = (server: McpServer): string => {
-		return JSON.stringify(server, null, 2);
 	};
 
 	const serverEntries = Object.entries(mcpServers || {}).sort(([a], [b]) =>
@@ -95,104 +112,139 @@ function MCPPageContent() {
 	);
 
 	return (
-		<div className="">
+		<Box style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+			{/* Create modal */}
+			<Modal
+				opened={createOpened}
+				onClose={closeCreate}
+				title={t("mcp.addServerTitle")}
+				size="lg"
+				centered
+				overlayProps={{ backgroundOpacity: 0.4, blur: 4 }}
+			>
+				<Text size="sm" c="dimmed" mb="md">
+					{t("mcp.addServerDescription")}
+				</Text>
+				<MCPCreatePanel onClose={closeCreate} />
+			</Modal>
+
+			{/* Edit modal */}
+			<Modal
+				opened={editing !== null}
+				onClose={closeEditor}
+				title={editing?.name}
+				size="lg"
+				centered
+				overlayProps={{ backgroundOpacity: 0.4, blur: 4 }}
+			>
+				{editing && (
+					<Stack gap="md">
+						<Box
+							style={{
+								borderRadius: "var(--mantine-radius-md)",
+								overflow: "hidden",
+								border: "1px solid var(--mantine-color-default-border)",
+							}}
+						>
+							<CodeMirror
+								value={editContent}
+								height="280px"
+								theme={codeMirrorTheme}
+								extensions={[json()]}
+								onChange={setEditContent}
+								placeholder="Enter MCP server configuration as JSON"
+							/>
+						</Box>
+						<Group justify="space-between">
+							<Tooltip label={t("mcp.deleteServerTitle")} position="bottom">
+								<ActionIcon
+									variant="subtle"
+									color="red"
+									size="md"
+									onClick={() => handleDeleteServer(editing.name)}
+									disabled={deleteMcpServer.isPending}
+									style={{ opacity: 0.5 }}
+									onMouseEnter={(e) => {
+										e.currentTarget.style.opacity = "1";
+									}}
+									onMouseLeave={(e) => {
+										e.currentTarget.style.opacity = "0.5";
+									}}
+								>
+									<TrashIcon size={16} />
+								</ActionIcon>
+							</Tooltip>
+
+							<Tooltip label={t("mcp.save")} position="bottom">
+								<ActionIcon
+									variant={hasChanges ? "filled" : "subtle"}
+									color={hasChanges ? "brand" : "gray"}
+									size="md"
+									onClick={handleSaveConfig}
+									disabled={!hasChanges || updateMcpServer.isPending}
+									loading={updateMcpServer.isPending}
+								>
+									<SaveIcon size={16} />
+								</ActionIcon>
+							</Tooltip>
+						</Group>
+					</Stack>
+				)}
+			</Modal>
+
 			<PageHeader
 				title={t("mcp.title")}
 				description={t("mcp.description")}
 				actions={
-					<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-						<DialogTrigger asChild>
-							<Button
-								variant="ghost"
-								className="text-muted-foreground"
-								size="sm"
-							>
-								<PlusIcon size={14} />
-								{t("mcp.addServer")}
-							</Button>
-						</DialogTrigger>
-						<DialogContent className="max-w-[700px] h-[500px]">
-							<DialogHeader>
-								<DialogTitle className="text-primary text-sm">
-									{t("mcp.addServerTitle")}
-								</DialogTitle>
-								<DialogDescription className="text-muted-foreground text-sm">
-									{t("mcp.addServerDescription")}
-								</DialogDescription>
-							</DialogHeader>
-							<div className="py-3 mt-3">
-								<MCPCreatePanel onClose={() => setIsDialogOpen(false)} />
-							</div>
-						</DialogContent>
-					</Dialog>
+					<Tooltip label={t("mcp.addServer")} position="bottom">
+						<ActionIcon
+							variant="subtle"
+							color="gray"
+							size="md"
+							onClick={openCreate}
+						>
+							<PlusIcon size={16} />
+						</ActionIcon>
+					</Tooltip>
 				}
 			/>
-			<div className="">
-				{serverEntries.length === 0 ? (
-					<div className="text-center text-muted-foreground py-8">
-						{t("mcp.noServersConfigured")}
-					</div>
-				) : (
-					<Accordion type="multiple" className="">
-						{serverEntries.map(([serverName, serverConfig]) => (
-							<AccordionItem
-								key={serverName}
-								value={serverName}
-								className="bg-card"
-							>
-								<AccordionTrigger className="hover:no-underline px-4 py-2 bg-card hover:bg-accent  duration-150">
-									<div className="flex items-center gap-2">
-										<HammerIcon size={12} />
-										<span className="font-medium">{serverName}</span>
-									</div>
-								</AccordionTrigger>
-								<AccordionContent className="pb-3">
-									<div className="px-3 pt-3 space-y-3">
-										<div className="rounded-lg overflow-hidden border">
-											<CodeMirror
-												value={
-													serverConfigs[serverName] ||
-													formatConfigForDisplay(serverConfig)
-												}
-												height="180px"
-												theme={codeMirrorTheme}
-												extensions={[json()]}
-												onChange={(value) =>
-													handleConfigChange(serverName, value)
-												}
-												placeholder="Enter MCP server configuration as JSON"
-											/>
-										</div>
-										<div className="flex justify-between  bg-card">
-											<Button
-												variant="outline"
-												onClick={() => handleSaveConfig(serverName)}
-												disabled={updateMcpServer.isPending}
-												size="sm"
-											>
-												<SaveIcon size={14} className="" />
-												{updateMcpServer.isPending
-													? t("mcp.saving")
-													: t("mcp.save")}
-											</Button>
 
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={() => handleDeleteServer(serverName)}
-												disabled={deleteMcpServer.isPending}
-											>
-												<TrashIcon size={14} className="" />
-											</Button>
-										</div>
-									</div>
-								</AccordionContent>
-							</AccordionItem>
+			{/* Server list */}
+			<Box px="lg" pb="lg" style={{ flex: 1, overflow: "auto" }}>
+				{serverEntries.length === 0 ? (
+					<Center py="xl">
+						<Text size="sm" c="dimmed">
+							{t("mcp.noServersConfigured")}
+						</Text>
+					</Center>
+				) : (
+					<Stack gap={0}>
+						{serverEntries.map(([serverName, serverConfig]) => (
+							<UnstyledButton
+								key={serverName}
+								onClick={() => openEditor(serverName, serverConfig)}
+								py="sm"
+								px="xs"
+								style={{
+									borderBottom:
+										"1px solid var(--mantine-color-default-border)",
+									borderRadius: 0,
+								}}
+							>
+								<Group justify="space-between" align="center">
+									<Text size="sm" fw={500}>
+										{serverName}
+									</Text>
+									<Text size="xs" c="dimmed">
+										{(serverConfig as any).type || "stdio"}
+									</Text>
+								</Group>
+							</UnstyledButton>
 						))}
-					</Accordion>
+					</Stack>
 				)}
-			</div>
-		</div>
+			</Box>
+		</Box>
 	);
 }
 
@@ -200,9 +252,9 @@ export function MCPPage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="flex items-center justify-center min-h-screen">
-					<div className="text-center">Loading MCP servers...</div>
-				</div>
+				<Center h="100vh">
+					<Loader size="sm" color="gray" />
+				</Center>
 			}
 		>
 			<MCPPageContent />
@@ -217,25 +269,25 @@ function MCPCreatePanel({ onClose }: { onClose?: () => void }) {
 	);
 
 	return (
-		<div className="">
-			<div className="flex mb-3 gap-1">
+		<Stack gap="md">
+			<Group gap={4}>
 				<Button
-					size="sm"
-					variant={currentTab === "recommend" ? "secondary" : "ghost"}
-					className="text-sm"
+					size="xs"
+					variant={currentTab === "recommend" ? "filled" : "subtle"}
+					color={currentTab === "recommend" ? "brand" : "gray"}
 					onClick={() => setCurrentTab("recommend")}
 				>
 					{t("mcp.recommend")}
 				</Button>
 				<Button
-					size="sm"
-					variant={currentTab === "manual" ? "secondary" : "ghost"}
-					className="text-sm"
+					size="xs"
+					variant={currentTab === "manual" ? "filled" : "subtle"}
+					color={currentTab === "manual" ? "brand" : "gray"}
 					onClick={() => setCurrentTab("manual")}
 				>
 					{t("mcp.custom")}
 				</Button>
-			</div>
+			</Group>
 
 			{match(currentTab)
 				.with("recommend", () => {
@@ -245,7 +297,7 @@ function MCPCreatePanel({ onClose }: { onClose?: () => void }) {
 					return <CustomMCPPanel onClose={onClose} />;
 				})
 				.exhaustive()}
-		</div>
+		</Stack>
 	);
 }
 
@@ -258,7 +310,6 @@ function RecommendMCPPanel({ onClose }: { onClose?: () => void }) {
 		mcpServer: (typeof builtInMcpServers)[0],
 	) => {
 		try {
-			// Check if MCP server already exists using cached data
 			const exists =
 				mcpServers && Object.keys(mcpServers).includes(mcpServer.name);
 
@@ -273,14 +324,12 @@ function RecommendMCPPanel({ onClose }: { onClose?: () => void }) {
 				return;
 			}
 
-			// Show confirmation dialog
 			const confirmed = await ask(
 				t("mcp.addServerConfirm", { serverName: mcpServer.name }),
 				{ title: t("mcp.addServerTitle"), kind: "info" },
 			);
 
 			if (confirmed) {
-				// Parse the prefill JSON to get the config object
 				const configObject = JSON.parse(`{${mcpServer.prefill}}`);
 
 				addMcpServer.mutate(
@@ -290,7 +339,6 @@ function RecommendMCPPanel({ onClose }: { onClose?: () => void }) {
 					},
 					{
 						onSuccess: () => {
-							// Close dialog after successful addition
 							onClose?.();
 						},
 					},
@@ -306,39 +354,39 @@ function RecommendMCPPanel({ onClose }: { onClose?: () => void }) {
 	};
 
 	return (
-		<div className="grid grid-cols-3 gap-5">
+		<Stack gap="xs">
 			{builtInMcpServers.map((mcpServer) => (
-				<div
+				<UnstyledButton
 					key={mcpServer.name}
-					className="border p-3 rounded-md h-[120px] flex justify-between flex-col hover:bg-primary/10 hover:border-primary/20 hover:text-primary cursor-default"
 					onClick={() => handleAddMcpServer(mcpServer)}
+					p="md"
+					style={{
+						border: "1px solid var(--mantine-color-default-border)",
+						borderRadius: "var(--mantine-radius-md)",
+					}}
 				>
-					<div className="flex justify-between items-center">
-						<h3 className="font-bold text-primary">{mcpServer.name}</h3>
-						<a
+					<Group justify="space-between" align="flex-start" mb={4}>
+						<Text size="sm" fw={600}>
+							{mcpServer.name}
+						</Text>
+						<ActionIcon
+							variant="subtle"
+							color="gray"
+							size="sm"
 							onClick={(e) => {
 								e.stopPropagation();
 								openUrl(mcpServer.source);
 							}}
-							className="text-sm text-muted-foreground flex items-center gap-1 hover:underline"
 						>
-							<ExternalLinkIcon size={12} />
-							{t("mcp.source")}
-						</a>
-					</div>
-					<div></div>
-					<div className="space-y-3">
-						<p className="text-sm text-muted-foreground">
-							{mcpServer.description}
-						</p>
-						{/* <Button size="sm" variant="outline" className="w-full text-sm">
-          <PlusIcon />
-          添加
-        </Button> */}
-					</div>
-				</div>
+							<ExternalLinkIcon size={14} />
+						</ActionIcon>
+					</Group>
+					<Text size="xs" c="dimmed">
+						{mcpServer.description}
+					</Text>
+				</UnstyledButton>
 			))}
-		</div>
+		</Stack>
 	);
 }
 
@@ -351,7 +399,6 @@ function CustomMCPPanel({ onClose }: { onClose?: () => void }) {
 
 	const handleAddCustomMcpServer = async () => {
 		try {
-			// Validate JSON format
 			let configObject;
 			try {
 				configObject = JSON.parse(customConfig);
@@ -363,7 +410,6 @@ function CustomMCPPanel({ onClose }: { onClose?: () => void }) {
 				return;
 			}
 
-			// Check if it's an object with at least one server
 			if (typeof configObject !== "object" || configObject === null) {
 				await message(t("mcp.invalidConfigError"), {
 					title: "Invalid Configuration",
@@ -381,7 +427,6 @@ function CustomMCPPanel({ onClose }: { onClose?: () => void }) {
 				return;
 			}
 
-			// Check for duplicate server names
 			const existingNames = mcpServers ? Object.keys(mcpServers) : [];
 			const duplicateNames = serverNames.filter((name) =>
 				existingNames.includes(name),
@@ -400,14 +445,12 @@ function CustomMCPPanel({ onClose }: { onClose?: () => void }) {
 				return;
 			}
 
-			// Show confirmation dialog
 			const confirmed = await ask(
 				t("mcp.addCustomServersConfirm", { count: serverNames.length }),
 				{ title: t("mcp.addCustomServersTitle"), kind: "info" },
 			);
 
 			if (confirmed) {
-				// Add each server
 				for (const [serverName, serverConfig] of Object.entries(configObject)) {
 					addMcpServer.mutate({
 						serverName,
@@ -415,7 +458,6 @@ function CustomMCPPanel({ onClose }: { onClose?: () => void }) {
 					});
 				}
 
-				// Clear input and close dialog
 				setCustomConfig("");
 				onClose?.();
 			}
@@ -429,31 +471,32 @@ function CustomMCPPanel({ onClose }: { onClose?: () => void }) {
 	};
 
 	return (
-		<div className="">
-			<div className="space-y-3">
-				<div className="rounded-lg overflow-hidden border">
-					<CodeMirror
-						value={customConfig}
-						onChange={(value) => setCustomConfig(value)}
-						height="240px"
-						theme={codeMirrorTheme}
-						extensions={[json()]}
-						placeholder={t("mcp.customPlaceholder")}
-					/>
-				</div>
+		<Stack gap="md">
+			<Box
+				style={{
+					borderRadius: "var(--mantine-radius-md)",
+					overflow: "hidden",
+					border: "1px solid var(--mantine-color-default-border)",
+				}}
+			>
+				<CodeMirror
+					value={customConfig}
+					onChange={(value) => setCustomConfig(value)}
+					height="240px"
+					theme={codeMirrorTheme}
+					extensions={[json()]}
+					placeholder={t("mcp.customPlaceholder")}
+				/>
+			</Box>
 
-				<div>
-					<Button
-						size="sm"
-						variant="outline"
-						className="w-full text-sm"
-						onClick={handleAddCustomMcpServer}
-						disabled={!customConfig.trim()}
-					>
-						{t("mcp.add")}
-					</Button>
-				</div>
-			</div>
-		</div>
+			<Group justify="flex-end">
+				<Button
+					onClick={handleAddCustomMcpServer}
+					disabled={!customConfig.trim()}
+				>
+					{t("mcp.add")}
+				</Button>
+			</Group>
+		</Stack>
 	);
 }

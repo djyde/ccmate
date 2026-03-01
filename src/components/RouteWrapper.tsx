@@ -1,13 +1,14 @@
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { type ReactNode, Suspense } from "react";
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary";
+import { Loader, Center } from "@mantine/core";
 import { QueryErrorFallback } from "./QueryErrorFallback";
 
 function LoadingFallback() {
 	return (
-		<div className="flex items-center justify-center min-h-screen">
-			<div className="text-muted-foreground">Loading...</div>
-		</div>
+		<Center mih="100vh">
+			<Loader size="sm" />
+		</Center>
 	);
 }
 

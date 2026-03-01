@@ -6,17 +6,31 @@ import {
 	CpuIcon,
 	FileJsonIcon,
 	FolderIcon,
+	MonitorIcon,
+	MoonIcon,
 	SettingsIcon,
+	SunIcon,
 	TerminalIcon,
 } from "lucide-react";
 import type React from "react";
+import {
+	AppShell,
+	Center,
+	NavLink as MantineNavLink,
+	SegmentedControl,
+	Stack,
+	VisuallyHidden,
+	useMantineColorScheme,
+} from "@mantine/core";
 import { useTranslation } from "react-i18next";
-import { NavLink, Outlet } from "react-router-dom";
-import { cn, isMacOS } from "../lib/utils";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { isMacOS } from "../lib/utils";
 import { UpdateButton } from "./UpdateButton";
 
 export function Layout() {
 	const { t } = useTranslation();
+	const { colorScheme, setColorScheme } = useMantineColorScheme();
+	const location = useLocation();
 
 	const navGroups = [
 		[
@@ -53,65 +67,75 @@ export function Layout() {
 		WebkitAppRegion: "drag",
 	} as React.CSSProperties;
 
+	const isActive = (to: string) => {
+		if (to === "/") return location.pathname === "/";
+		return location.pathname.startsWith(to);
+	};
+
 	return (
-		<div className="flex h-screen">
-			{/* Sidebar */}
-			<nav
+		<AppShell
+			navbar={{ width: 220, breakpoint: 0 }}
+			padding={0}
+		>
+			<AppShell.Navbar
 				data-tauri-drag-region
 				style={dragRegionStyle}
-				className="w-[220px] shrink-0 flex flex-col border-r border-border/40"
+				p="xs"
 			>
 				{isMacOS && (
 					<div
 						data-tauri-drag-region
-						className="h-10 shrink-0"
-						style={dragRegionStyle}
+						style={{ ...dragRegionStyle, height: 32, flexShrink: 0 }}
 					/>
 				)}
-				<div
-					className="flex flex-col flex-1 justify-between px-3 pt-1"
-					data-tauri-drag-region
-				>
-					<div>
+				<AppShell.Section grow data-tauri-drag-region>
+					<Stack gap="lg">
 						{navGroups.map((group, gi) => (
-							<div
-								key={gi}
-								className={cn("space-y-0.5", gi > 0 && "mt-5")}
-							>
+							<Stack key={gi} gap={2}>
 								{group.map((link) => (
-									<NavLink
+									<MantineNavLink
 										key={link.to}
+										component={NavLink}
 										to={link.to}
 										end={link.to === "/"}
-										className={({ isActive: active }) =>
-											cn(
-												"flex items-center gap-3 px-3 py-1.5 text-[13px] rounded-md transition-colors duration-150",
-												active
-													? "text-foreground font-medium bg-foreground/[0.05]"
-													: "text-muted-foreground hover:text-foreground hover:bg-foreground/[0.03]",
-											)
-										}
-									>
-										<link.icon size={16} strokeWidth={1.5} />
-										{link.label}
-									</NavLink>
+										label={link.label}
+										leftSection={<link.icon size={16} strokeWidth={1.5} />}
+										active={isActive(link.to)}
+										variant="light"
+										styles={{
+											root: { borderRadius: "var(--mantine-radius-md)" },
+											label: { fontSize: 13 },
+										}}
+									/>
 								))}
-							</div>
+							</Stack>
 						))}
-					</div>
-					<div className="pb-3">
+					</Stack>
+				</AppShell.Section>
+				<AppShell.Section>
+					<Stack gap="xs" pb="xs">
 						<UpdateButton />
-					</div>
-				</div>
-			</nav>
+						<SegmentedControl
+							fullWidth
+							size="xs"
+							value={colorScheme}
+							onChange={(value) => setColorScheme(value as "light" | "dark" | "auto")}
+							data={[
+								{ value: "light", label: <Center><SunIcon size={14} /><VisuallyHidden>Light</VisuallyHidden></Center> },
+								{ value: "dark", label: <Center><MoonIcon size={14} /><VisuallyHidden>Dark</VisuallyHidden></Center> },
+								{ value: "auto", label: <Center><MonitorIcon size={14} /><VisuallyHidden>Auto</VisuallyHidden></Center> },
+							]}
+						/>
+					</Stack>
+				</AppShell.Section>
+			</AppShell.Navbar>
 
-			{/* Main content */}
-			<main
+			<AppShell.Main
 				data-tauri-drag-region
-				className="flex-1 min-w-0 h-screen overflow-y-auto"
+				style={{ height: "100vh", overflow: "auto" }}
 			>
 				<Outlet />
-			</main>
-		</div>
+			</AppShell.Main>
+		</AppShell>
 	);
 }
