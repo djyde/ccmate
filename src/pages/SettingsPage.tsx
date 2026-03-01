@@ -72,6 +72,7 @@ export function SettingsPage() {
             data={[
               { label: "English", value: "en" },
               { label: "中文", value: "zh-CN" },
+              { label: "繁體中文", value: "zh-TW" },
               { label: "Français", value: "fr" },
               { label: "日本語", value: "ja" },
             ]}
