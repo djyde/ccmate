@@ -253,7 +253,7 @@ function OutputTokenByModelChart() {
         {chartData.map((item) => (
           <Flex key={item.model} gap={12} align="center">
             <Tooltip label={item.model}>
-              <Box w={112} shrink={0}>
+              <Box w={112} style={{ flexShrink: 0 }}>
                 <Text size="xs" truncate c="dimmed">
                   {item.model}
                 </Text>
