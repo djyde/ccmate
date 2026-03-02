@@ -41,7 +41,9 @@
       "mcp__context7__query-docs",
       "Bash(ls:*)",
       "Bash(grep:*)",
-      "mcp__web-reader__webReader"
+      "mcp__web-reader__webReader",
+      "Bash(pnpm view:*)",
+      "Bash(cargo update:*)"
     ],
     "deny": [],
     "ask": []
