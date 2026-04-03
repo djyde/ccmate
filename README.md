@@ -14,8 +14,14 @@
 
 <table>
 <tr>
-<td width="180"><img src="https://github.com/user-attachments/assets/c086212b-952c-4a63-9f4c-cb1e5e2d7528" alt="PackyCode" width="150"></td>
+<td width="180"><a href="https://www.packyapi.com/register?aff=cc-mate"><img src="https://github.com/user-attachments/assets/c086212b-952c-4a63-9f4c-cb1e5e2d7528" alt="PackyCode" width="150"></a></td>
 <td>Thanks to PackyCode for sponsoring this project! PackyCode is a reliable and efficient API relay service provider, offering relay services for Claude Code, Codex, Gemini, and more. PackyCode provides special discounts for our software users: register using <a href="https://www.packyapi.com/register?aff=cc-mate">this link</a> and enter the "cc-mate" promo code during recharge to get 10% off.</td>
+</tr>
+
+<tr>
+<td width="180"><a href="https://www.aicodemirror.com/register?invitecode=KFENBH"><img src="https://github.com/user-attachments/assets/7db9ebb7-801a-4a20-8487-2ee6ef2829b7" alt="AICodeMirror" width="150"></a>
+</td>
+<td>Thanks to AICodeMirror for sponsoring this project! AICodeMirror provides official high-stability relay services for Claude Code / Codex / Gemini CLI, with enterprise-grade concurrency, fast invoicing, and 24/7 dedicated technical support. Claude Code / Codex / Gemini official channels at 38% / 2% / 9% of original price, with extra discounts on top-ups! AICodeMirror offers special benefits for CCmate users: register via <a href="https://www.aicodemirror.com/register?invitecode=KFENBH">this link</a> to enjoy 20% off your first top-up, and enterprise customers can get up to 25% off!</td>
 </tr>
 </table>
 
